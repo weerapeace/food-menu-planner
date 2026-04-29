@@ -91,7 +91,9 @@ function bindShareActions() {
     state.cart = [];
     renderAll();
   });
-  document.getElementById('saveOrderBtn').addEventListener('click', saveCurrentOrder);
+  document.getElementById('saveOrderBtn').addEventListener('click', function() {
+    saveCurrentOrder(true);
+  });
   document.getElementById('clearHistoryBtn').addEventListener('click', clearOrderHistory);
 }
 
@@ -145,17 +147,6 @@ async function loadData() {
   const localPayload = loadLocalAppData() || state.defaults;
   const localHistory = loadLocalOrderHistory();
 
-  if (state.backendUrl) {
-    const remotePayload = await tryLoadBackendState();
-    if (remotePayload) {
-      applyLoadedState(remotePayload, {
-        source: 'remote',
-        statusText: 'เชื่อมอยู่กับ Google Sheet และโหลดข้อมูลล่าสุดแล้ว',
-      });
-      return;
-    }
-  }
-
   applyLoadedState({
     ingredients: localPayload.ingredients || [],
     recipes: localPayload.recipes || [],
@@ -163,9 +154,24 @@ async function loadData() {
   }, {
     source: 'local',
     statusText: state.backendUrl
-      ? 'เชื่อม Google Sheet ไม่สำเร็จ ตอนนี้ใช้ข้อมูลในเครื่องชั่วคราว'
-      : 'ยังไม่ได้เชื่อม Google Sheet ตอนนี้แอปจะใช้ข้อมูลในเครื่องชั่วคราว',
+      ? '??????????? Google Sheet ??????????????'
+      : '??????????????? Google Sheet ?????????????????????????????????????',
   });
+
+  if (state.backendUrl) {
+    window.setTimeout(async function() {
+      const remotePayload = await tryLoadBackendState();
+      if (!remotePayload) {
+        updateBackendStatus('?????? Google Sheet ????????? ????????????????????????????????', 'local');
+        return;
+      }
+
+      applyLoadedState(remotePayload, {
+        source: 'remote',
+        statusText: '????????????? Google Sheet ???????????????????????',
+      });
+    }, 0);
+  }
 }
 
 function applyLoadedState(payload, options) {
@@ -492,7 +498,6 @@ function renderRecipes() {
     });
     fragment.querySelector('.add-cart-btn').addEventListener('click', function() {
       addRecipeToOrder(recipe);
-      setTab('cart');
       renderAll();
     });
 
@@ -918,7 +923,6 @@ function handleDetailAddToCart(recipeId) {
   if (!recipe) return;
   addRecipeToOrder(recipe);
   document.getElementById('recipeDetailDialog').close();
-  setTab('cart');
   renderAll();
 }
 
@@ -936,9 +940,9 @@ function addRecipeToOrder(recipe) {
   });
 }
 
-async function saveCurrentOrder() {
+async function saveCurrentOrder(shouldOpenLine) {
   if (!state.cart.length) {
-    alert('ยังไม่มีออเดอร์ให้บันทึก');
+    alert('????????????????????????');
     return;
   }
 
@@ -952,17 +956,23 @@ async function saveCurrentOrder() {
     }),
   };
 
+  const shareUrl = document.getElementById('orderLineLink').href;
+
   if (state.backendUrl) {
     await submitBackendAction('saveOrder', order);
   } else {
     state.orderHistory.unshift(order);
     persistLocalMirrors();
-    updateBackendStatus('บันทึกออเดอร์ในเครื่องแล้ว', 'local');
+    updateBackendStatus('??????????????????????????', 'local');
   }
 
   state.cart = [];
   setTab('daily-orders');
   renderAll();
+
+  if (shouldOpenLine && shareUrl && shareUrl !== '#') {
+    window.open(shareUrl, '_blank', 'noopener,noreferrer');
+  }
 }
 
 async function clearOrderHistory() {
