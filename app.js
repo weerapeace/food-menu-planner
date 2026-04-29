@@ -740,7 +740,7 @@ function closeRecipeDialog() {
 async function saveRecipeFromDialog() {
   const name = document.getElementById('recipeNameInput').value.trim();
   if (!name) {
-    alert('กรุณาใส่ชื่อเมนู');
+    alert('????????????????');
     return;
   }
 
@@ -753,7 +753,7 @@ async function saveRecipeFromDialog() {
   }).filter(Boolean);
 
   if (!items.length) {
-    alert('กรุณาเลือกวัตถุดิบอย่างน้อย 1 รายการ');
+    alert('??????????????????????????? 1 ??????');
     return;
   }
 
@@ -769,27 +769,33 @@ async function saveRecipeFromDialog() {
     items: items,
   };
 
-  if (state.backendUrl) {
-    await submitBackendAction('saveRecipe', recipeRecord);
+  const raw = toRawData(state.data);
+  const index = raw.recipes.findIndex(function(item) { return item.id === recipeRecord.id; });
+  if (index >= 0) {
+    raw.recipes[index] = recipeRecord;
   } else {
-    const raw = toRawData(state.data);
-    const index = raw.recipes.findIndex(function(item) { return item.id === recipeRecord.id; });
-    if (index >= 0) {
-      raw.recipes[index] = recipeRecord;
-    } else {
-      raw.recipes.push(recipeRecord);
-    }
-    applyLoadedState({
-      ingredients: raw.ingredients,
-      recipes: raw.recipes,
-      orderHistory: state.orderHistory,
-    }, {
-      source: 'local',
-      statusText: 'บันทึกเมนูในเครื่องแล้ว',
-    });
+    raw.recipes.push(recipeRecord);
   }
 
+  applyLoadedState({
+    ingredients: raw.ingredients,
+    recipes: raw.recipes,
+    orderHistory: state.orderHistory,
+  }, {
+    source: 'local',
+    statusText: state.backendUrl ? '???????????????????? Google Sheet' : '???????????????????????',
+  });
+
   closeRecipeDialog();
+
+  if (state.backendUrl) {
+    try {
+      await submitBackendAction('saveRecipe', recipeRecord);
+    } catch (error) {
+      console.error(error);
+      updateBackendStatus('?????????????? Google Sheet ????????? ???????????????????????????', 'error');
+    }
+  }
 }
 
 function openIngredientDialog(context) {
