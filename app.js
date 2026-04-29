@@ -1,6 +1,7 @@
 const APP_DATA_KEY = 'food-menu-app-data-v4';
 const ORDER_HISTORY_KEY = 'food-menu-daily-orders-v2';
 const BACKEND_URL_KEY = 'food-menu-backend-url-v1';
+const DEFAULT_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyAyJmOnTo83hjaUyKq_TXHRUWRVF7VPvLV9RU9pRmh5QKkYlR_eursWH_SsY_kOOhEDg/exec';
 
 const CORE_SHARE_CATEGORIES = new Set(['โปรตีน', 'ผัก', 'ซีฟู้ด']);
 
@@ -293,7 +294,7 @@ function persistLocalMirrors() {
 }
 
 function getStoredBackendUrl() {
-  return normalizeBackendUrl(localStorage.getItem(BACKEND_URL_KEY) || '');
+  return normalizeBackendUrl(localStorage.getItem(BACKEND_URL_KEY) || DEFAULT_BACKEND_URL);
 }
 
 function normalizeBackendUrl(value) {
