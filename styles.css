@@ -170,6 +170,36 @@ p {
   border-color: transparent;
 }
 
+.floating-cart {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border: 0;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), #ea7d4a);
+  color: #fff;
+  box-shadow: 0 16px 30px rgba(140, 52, 18, 0.28);
+  cursor: pointer;
+  z-index: 40;
+}
+
+.floating-cart strong {
+  min-width: 36px;
+  height: 36px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.floating-cart.is-hidden {
+  display: none;
+}
+
 .content {
   display: grid;
   gap: 18px;

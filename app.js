@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   bindRecipeDialogs();
   bindIngredientDialog();
   bindBackendControls();
+  bindFloatingCart();
   await loadData();
 });
 
@@ -32,6 +33,12 @@ function bindTabs() {
     button.addEventListener('click', function() {
       setTab(button.dataset.tab);
     });
+  });
+}
+
+function bindFloatingCart() {
+  document.getElementById('floatingCartBtn').addEventListener('click', function() {
+    setTab('cart');
   });
 }
 
@@ -431,6 +438,7 @@ function renderAll() {
   renderIngredients();
   renderCart();
   renderDailyOrders();
+  renderFloatingCart();
   renderShareIngredientRows();
   renderAvailableMenus();
   updateTabUI();
@@ -451,6 +459,13 @@ function renderSummary() {
   document.getElementById('summaryCards').innerHTML = cards.map(function(card) {
     return '<div class="stat-card"><span>' + escapeHtml(card.label) + '</span><strong>' + escapeHtml(card.value) + '</strong></div>';
   }).join('');
+}
+
+function renderFloatingCart() {
+  const button = document.getElementById('floatingCartBtn');
+  const count = state.cart.reduce(function(sum, item) { return sum + Number(item.qty || 0); }, 0);
+  document.getElementById('floatingCartCount').textContent = String(count);
+  button.classList.toggle('is-hidden', state.activeTab === 'cart');
 }
 
 function renderRecipes() {
@@ -816,14 +831,14 @@ function closeIngredientDialog() {
 async function saveIngredientFromDialog() {
   const name = document.getElementById('ingredientNameInput').value.trim();
   if (!name) {
-    alert('กรุณาใส่ชื่อวัตถุดิบ');
+    alert('????????????????????');
     return;
   }
 
   const ingredient = {
     id: 'ING' + Date.now(),
     name: name,
-    category: document.getElementById('ingredientCategoryInput').value.trim() || 'อื่นๆ',
+    category: document.getElementById('ingredientCategoryInput').value.trim() || '?????',
     stockQty: 0,
     unit: document.getElementById('ingredientUnitInput').value.trim(),
     purchasePrice: Number(document.getElementById('ingredientPriceInput').value || 0),
@@ -831,20 +846,16 @@ async function saveIngredientFromDialog() {
     notes: document.getElementById('ingredientNotesInput').value.trim(),
   };
 
-  if (state.backendUrl) {
-    await submitBackendAction('saveIngredient', ingredient);
-  } else {
-    const raw = toRawData(state.data);
-    raw.ingredients.push(ingredient);
-    applyLoadedState({
-      ingredients: raw.ingredients,
-      recipes: raw.recipes,
-      orderHistory: state.orderHistory,
-    }, {
-      source: 'local',
-      statusText: 'บันทึกวัตถุดิบในเครื่องแล้ว',
-    });
-  }
+  const raw = toRawData(state.data);
+  raw.ingredients.push(ingredient);
+  applyLoadedState({
+    ingredients: raw.ingredients,
+    recipes: raw.recipes,
+    orderHistory: state.orderHistory,
+  }, {
+    source: 'local',
+    statusText: state.backendUrl ? '???????????????????????? Google Sheet' : '???????????????????????????',
+  });
 
   closeIngredientDialog();
 
@@ -855,6 +866,15 @@ async function saveIngredientFromDialog() {
       state.selectedIngredients.push(ingredient.id);
     }
     renderAll();
+  }
+
+  if (state.backendUrl) {
+    try {
+      await submitBackendAction('saveIngredient', ingredient);
+    } catch (error) {
+      console.error(error);
+      updateBackendStatus('?????????????????? Google Sheet ????????? ???????????????????????????', 'error');
+    }
   }
 }
 
@@ -952,6 +972,7 @@ async function saveCurrentOrder(shouldOpenLine) {
     return;
   }
 
+  const popup = shouldOpenLine ? window.open('about:blank', '_blank', 'noopener,noreferrer') : null;
   const now = new Date();
   const order = {
     id: 'ORD' + now.getTime(),
@@ -963,46 +984,68 @@ async function saveCurrentOrder(shouldOpenLine) {
   };
 
   const shareUrl = document.getElementById('orderLineLink').href;
-
-  if (state.backendUrl) {
-    await submitBackendAction('saveOrder', order);
-  } else {
-    state.orderHistory.unshift(order);
-    persistLocalMirrors();
-    updateBackendStatus('??????????????????????????', 'local');
-  }
-
+  state.orderHistory.unshift(order);
   state.cart = [];
+  persistLocalMirrors();
   setTab('daily-orders');
   renderAll();
 
-  if (shouldOpenLine && shareUrl && shareUrl !== '#') {
-    window.open(shareUrl, '_blank', 'noopener,noreferrer');
+  if (popup && shareUrl && shareUrl !== '#') {
+    popup.location.href = shareUrl;
+  }
+
+  if (state.backendUrl) {
+    try {
+      await submitBackendAction('saveOrder', order);
+    } catch (error) {
+      console.error(error);
+      updateBackendStatus('????????????????? Google Sheet ????????? ???????????????????????????', 'error');
+    }
+  } else {
+    updateBackendStatus('??????????????????????????', 'local');
   }
 }
 
 async function clearOrderHistory() {
   if (!state.orderHistory.length) return;
-  if (!window.confirm('ต้องการล้างประวัติออเดอร์ทั้งหมดหรือไม่')) return;
+  if (!window.confirm('???????????????????????????????????????')) return;
+
+  const previous = state.orderHistory.slice();
+  state.orderHistory = [];
+  persistLocalMirrors();
+  renderAll();
 
   if (state.backendUrl) {
-    await submitBackendAction('clearOrders', {});
-  } else {
-    state.orderHistory = [];
-    persistLocalMirrors();
-    renderAll();
+    try {
+      await submitBackendAction('clearOrders', {});
+    } catch (error) {
+      console.error(error);
+      state.orderHistory = previous;
+      persistLocalMirrors();
+      renderAll();
+      updateBackendStatus('????????????? Google Sheet ?????????', 'error');
+    }
   }
 }
 
 async function removeHistoryOrder(orderId) {
+  const previous = state.orderHistory.slice();
+  state.orderHistory = state.orderHistory.filter(function(order) {
+    return order.id !== orderId;
+  });
+  persistLocalMirrors();
+  renderAll();
+
   if (state.backendUrl) {
-    await submitBackendAction('deleteOrder', { id: orderId });
-  } else {
-    state.orderHistory = state.orderHistory.filter(function(order) {
-      return order.id !== orderId;
-    });
-    persistLocalMirrors();
-    renderAll();
+    try {
+      await submitBackendAction('deleteOrder', { id: orderId });
+    } catch (error) {
+      console.error(error);
+      state.orderHistory = previous;
+      persistLocalMirrors();
+      renderAll();
+      updateBackendStatus('??????????? Google Sheet ?????????', 'error');
+    }
   }
 }
 
