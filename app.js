@@ -1,5 +1,5 @@
-const APP_DATA_KEY = 'food-menu-app-data-v4';
-const ORDER_HISTORY_KEY = 'food-menu-daily-orders-v2';
+const APP_DATA_KEY = 'food-menu-app-data-v6';
+const ORDER_HISTORY_KEY = 'food-menu-daily-orders-v4';
 const BACKEND_URL_KEY = 'food-menu-backend-url-v1';
 const DEFAULT_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyAyJmOnTo83hjaUyKq_TXHRUWRVF7VPvLV9RU9pRmh5QKkYlR_eursWH_SsY_kOOhEDg/exec';
 
@@ -164,21 +164,21 @@ async function loadData() {
   }, {
     source: 'local',
     statusText: state.backendUrl
-      ? '??????????? Google Sheet ??????????????'
-      : '??????????????? Google Sheet ?????????????????????????????????????',
+      ? 'กำลังเชื่อมข้อมูลกับ Google Sheet อยู่เบื้องหลัง'
+      : 'กำลังใช้ข้อมูลในเครื่อง และยังไม่ได้เชื่อม Google Sheet',
   });
 
   if (state.backendUrl) {
     window.setTimeout(async function() {
-      const remotePayload = await tryLoadBackendState();
+      const remotePayload = await tryLoadBackendStateWithRetry(4, 900);
       if (!remotePayload) {
-        updateBackendStatus('?????? Google Sheet ????????? ????????????????????????????????', 'local');
+        updateBackendStatus('เชื่อม Google Sheet ไม่สำเร็จ ตอนนี้ใช้ข้อมูลในเครื่องชั่วคราว', 'local');
         return;
       }
 
       applyLoadedState(remotePayload, {
         source: 'remote',
-        statusText: '????????????? Google Sheet ???????????????????????',
+        statusText: 'เชื่อมข้อมูลกับ Google Sheet แล้ว และโหลดข้อมูลล่าสุดเรียบร้อย',
       });
     }, 0);
   }
@@ -201,7 +201,7 @@ function applyLoadedState(payload, options) {
 }
 
 async function syncFromBackend(successText) {
-  const remotePayload = await tryLoadBackendState();
+  const remotePayload = await tryLoadBackendStateWithRetry(4, 900);
   if (!remotePayload) {
     updateBackendStatus('โหลดข้อมูลจาก Google Sheet ไม่สำเร็จ กรุณาเช็ก URL และการ Deploy', 'error');
     return;
@@ -222,6 +222,21 @@ async function tryLoadBackendState() {
   }
 }
 
+async function tryLoadBackendStateWithRetry(maxAttempts, delayMs) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const payload = await tryLoadBackendState();
+    if (payload) {
+      return payload;
+    }
+
+    if (attempt < maxAttempts) {
+      await wait(delayMs * attempt);
+    }
+  }
+
+  return null;
+}
+
 function loadBackendState() {
   return callBackendAction('bootstrap').then(function(response) {
     if (!response || response.ok === false) {
@@ -240,7 +255,7 @@ async function submitBackendAction(action, payload) {
   if (response.data) {
     applyLoadedState(response.data, {
       source: 'remote',
-      statusText: '??????????????? Google Sheet ????',
+      statusText: 'บันทึกข้อมูลไปที่ Google Sheet แล้ว',
     });
     return;
   }
@@ -262,6 +277,12 @@ function loadLocalOrderHistory() {
   } catch (error) {
     return [];
   }
+}
+
+function wait(ms) {
+  return new Promise(function(resolve) {
+    window.setTimeout(resolve, ms);
+  });
 }
 
 function persistLocalMirrors() {
@@ -309,7 +330,7 @@ function callBackendAction(action, payload) {
 
     script.onerror = function() {
       cleanup();
-      reject(new Error('??????????? Google Sheet ?????????'));
+      reject(new Error('โหลดข้อมูลจาก Google Sheet ไม่สำเร็จ'));
     };
 
     script.src = src;
@@ -1250,6 +1271,31 @@ function shareDailyOrderToLine(orderId) {
   const text = buildDailyOrderLineText(order);
   const url = 'https://line.me/R/msg/text/?' + encodeURIComponent(text);
   window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+function buildDailyOrderLineText(order) {
+  return ['สรุปออเดอร์', '', order.items.map(function(item) {
+    return '- ' + item.name + ' x ' + item.qty + ' จาน';
+  }).join('\n')].join('\n');
+}
+
+function openDailyOrderDetail(orderId) {
+  const order = state.orderHistory.find(function(item) { return item.id === orderId; });
+  if (!order) return;
+
+  document.getElementById('dailyOrderDetailTitle').textContent = 'ออเดอร์เวลา ' + order.timeLabel;
+  document.getElementById('dailyOrderDetailBody').innerHTML = [
+    '<div class="detail-grid">',
+    '<div class="detail-section"><h4>วันที่</h4><p class="detail-note">' + escapeHtml(formatDateLabel(order.dateKey)) + '</p></div>',
+    '<div class="detail-section"><h4>รายการอาหาร</h4><div class="menu-list">' + order.items.map(function(item) {
+      const recipe = state.data.recipes.find(function(entry) { return entry.name === item.name; });
+      return '<div class="menu-list-item"><div class="title-row"><strong>' + escapeHtml(item.name + ' x ' + item.qty) + '</strong></div><div class="actions">' + (recipe ? '<button class="secondary" type="button" onclick="openRecipeDetail(\'' + recipe.id + '\')">ดูเมนู</button>' : '') + '</div></div>';
+    }).join('') + '</div></div>',
+    '<div class="detail-section"><h4>ข้อความส่ง LINE</h4><div class="detail-longtext">' + formatLongText(buildDailyOrderLineText(order)) + '</div></div>',
+    '<div class="actions"><button class="primary" type="button" onclick="shareDailyOrderToLine(\'' + order.id + '\')">ส่งเข้า LINE</button></div>',
+    '</div>',
+  ].join('');
+  document.getElementById('dailyOrderDetailDialog').showModal();
 }
 
 window.openRecipeDialog = openRecipeDialog;
