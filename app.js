@@ -1,17 +1,20 @@
-const APP_DATA_KEY = 'food-menu-app-data-v3';
-const ORDER_HISTORY_KEY = 'food-menu-daily-orders-v1';
+const APP_DATA_KEY = 'food-menu-app-data-v4';
+const ORDER_HISTORY_KEY = 'food-menu-daily-orders-v2';
+const BACKEND_URL_KEY = 'food-menu-backend-url-v1';
+
+const CORE_SHARE_CATEGORIES = new Set(['โปรตีน', 'ผัก', 'ซีฟู้ด']);
 
 const state = {
+  defaults: null,
   data: null,
   activeTab: 'recipes',
   cart: [],
   selectedIngredients: [],
   editingRecipeId: null,
-  orderHistory: [],
   ingredientDialogContext: 'ingredients',
+  orderHistory: [],
+  backendUrl: '',
 };
-
-const CORE_SHARE_CATEGORIES = new Set(['โปรตีน', 'ผัก', 'ซีฟู้ด']);
 
 document.addEventListener('DOMContentLoaded', async function() {
   bindTabs();
@@ -19,7 +22,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   bindShareActions();
   bindRecipeDialogs();
   bindIngredientDialog();
-  loadOrderHistory();
+  bindBackendControls();
   await loadData();
 });
 
@@ -32,7 +35,7 @@ function bindTabs() {
 }
 
 function bindFilters() {
-  ['recipeSearch', 'recipeCategoryFilter', 'recipeStatus', 'ingredientSearch', 'ingredientCategoryFilter'].forEach(function(id) {
+  ['recipeSearch', 'recipeCategoryFilter', 'ingredientSearch', 'ingredientCategoryFilter'].forEach(function(id) {
     const node = document.getElementById(id);
     if (!node) return;
     node.addEventListener('input', renderAll);
@@ -40,33 +43,53 @@ function bindFilters() {
   });
 }
 
-function bindShareActions() {
-  document.getElementById('addShareIngredientRowBtn').addEventListener('click', function() {
-    openShareIngredientDialog();
+function bindBackendControls() {
+  document.getElementById('saveBackendUrlBtn').addEventListener('click', async function() {
+    const nextUrl = normalizeBackendUrl(document.getElementById('backendUrlInput').value);
+    if (!nextUrl) {
+      alert('กรุณาใส่ Apps Script Web App URL ก่อน');
+      return;
+    }
+
+    localStorage.setItem(BACKEND_URL_KEY, nextUrl);
+    state.backendUrl = nextUrl;
+    await syncFromBackend('เชื่อม Google Sheet สำเร็จ');
   });
 
+  document.getElementById('syncBackendBtn').addEventListener('click', async function() {
+    if (!state.backendUrl) {
+      alert('ยังไม่ได้เชื่อม Apps Script URL');
+      return;
+    }
+    await syncFromBackend('โหลดข้อมูลล่าสุดจาก Google Sheet แล้ว');
+  });
+
+  document.getElementById('disconnectBackendBtn').addEventListener('click', function() {
+    localStorage.removeItem(BACKEND_URL_KEY);
+    state.backendUrl = '';
+    updateBackendStatus('ยกเลิกการเชื่อมแล้ว ตอนนี้แอปจะใช้ข้อมูลในเครื่องชั่วคราว', 'local');
+  });
+}
+
+function bindShareActions() {
+  document.getElementById('addShareIngredientRowBtn').addEventListener('click', openShareIngredientDialog);
   document.getElementById('openAddIngredientFromShareBtn').addEventListener('click', function() {
     openIngredientDialog('share');
   });
-
   document.getElementById('clearSelectedIngredients').addEventListener('click', function() {
     state.selectedIngredients = [];
     renderAll();
   });
-
   document.getElementById('copyLineTextBtn').addEventListener('click', async function() {
     await copyTextFromNode('lineShareText', this, 'คัดลอกข้อความ', 'คัดลอกแล้ว');
   });
-
   document.getElementById('copyOrderTextBtn').addEventListener('click', async function() {
     await copyTextFromNode('orderLineText', this, 'คัดลอกข้อความ', 'คัดลอกแล้ว');
   });
-
   document.getElementById('clearOrderBtn').addEventListener('click', function() {
     state.cart = [];
     renderAll();
   });
-
   document.getElementById('saveOrderBtn').addEventListener('click', saveCurrentOrder);
   document.getElementById('clearHistoryBtn').addEventListener('click', clearOrderHistory);
 }
@@ -75,24 +98,20 @@ function bindRecipeDialogs() {
   document.getElementById('openAddRecipeBtn').addEventListener('click', function() {
     openRecipeDialog();
   });
-
   document.getElementById('addIngredientRowBtn').addEventListener('click', function() {
     appendRecipeIngredientRow('');
   });
-
   document.getElementById('openAddIngredientFromRecipeBtn').addEventListener('click', function() {
     openIngredientDialog('recipe');
   });
-
   document.getElementById('closeRecipeDialog').addEventListener('click', closeRecipeDialog);
   document.getElementById('cancelRecipeDialog').addEventListener('click', closeRecipeDialog);
   document.getElementById('closeRecipeDetailDialog').addEventListener('click', function() {
     document.getElementById('recipeDetailDialog').close();
   });
-
-  document.getElementById('recipeForm').addEventListener('submit', function(event) {
+  document.getElementById('recipeForm').addEventListener('submit', async function(event) {
     event.preventDefault();
-    saveRecipeFromDialog();
+    await saveRecipeFromDialog();
   });
 }
 
@@ -100,15 +119,12 @@ function bindIngredientDialog() {
   document.getElementById('openAddIngredientBtn').addEventListener('click', function() {
     openIngredientDialog('ingredients');
   });
-
   document.getElementById('closeIngredientDialog').addEventListener('click', closeIngredientDialog);
   document.getElementById('cancelIngredientDialog').addEventListener('click', closeIngredientDialog);
-
-  document.getElementById('ingredientForm').addEventListener('submit', function(event) {
+  document.getElementById('ingredientForm').addEventListener('submit', async function(event) {
     event.preventDefault();
-    saveIngredientFromDialog();
+    await saveIngredientFromDialog();
   });
-
   document.getElementById('closeShareIngredientDialog').addEventListener('click', closeShareIngredientDialog);
   document.getElementById('cancelShareIngredientDialog').addEventListener('click', closeShareIngredientDialog);
   document.getElementById('shareIngredientForm').addEventListener('submit', function(event) {
@@ -118,35 +134,184 @@ function bindIngredientDialog() {
   document.getElementById('shareIngredientModalSearch').addEventListener('input', renderShareIngredientChecklist);
 }
 
-function loadOrderHistory() {
-  try {
-    state.orderHistory = JSON.parse(localStorage.getItem(ORDER_HISTORY_KEY) || '[]');
-  } catch (error) {
-    state.orderHistory = [];
-  }
-}
-
-function persistOrderHistory() {
-  localStorage.setItem(ORDER_HISTORY_KEY, JSON.stringify(state.orderHistory));
-}
-
 async function loadData() {
-  const response = await fetch('./data/menu-data.json', { cache: 'force-cache' });
-  const defaults = await response.json();
+  state.backendUrl = getStoredBackendUrl();
+  document.getElementById('backendUrlInput').value = state.backendUrl;
 
-  try {
-    state.data = transformData(JSON.parse(localStorage.getItem(APP_DATA_KEY) || 'null') || defaults);
-  } catch (error) {
-    state.data = transformData(defaults);
+  const response = await fetch('./data/menu-data.json', { cache: 'force-cache' });
+  state.defaults = await response.json();
+
+  const localPayload = loadLocalAppData() || state.defaults;
+  const localHistory = loadLocalOrderHistory();
+
+  if (state.backendUrl) {
+    const remotePayload = await tryLoadBackendState();
+    if (remotePayload) {
+      applyLoadedState(remotePayload, {
+        source: 'remote',
+        statusText: 'เชื่อมอยู่กับ Google Sheet และโหลดข้อมูลล่าสุดแล้ว',
+      });
+      return;
+    }
   }
 
+  applyLoadedState({
+    ingredients: localPayload.ingredients || [],
+    recipes: localPayload.recipes || [],
+    orderHistory: localHistory,
+  }, {
+    source: 'local',
+    statusText: state.backendUrl
+      ? 'เชื่อม Google Sheet ไม่สำเร็จ ตอนนี้ใช้ข้อมูลในเครื่องชั่วคราว'
+      : 'ยังไม่ได้เชื่อม Google Sheet ตอนนี้แอปจะใช้ข้อมูลในเครื่องชั่วคราว',
+  });
+}
+
+function applyLoadedState(payload, options) {
+  state.data = transformData({
+    ingredients: payload.ingredients || [],
+    recipes: payload.recipes || [],
+  });
+  state.orderHistory = Array.isArray(payload.orderHistory) ? payload.orderHistory : [];
+  state.selectedIngredients = state.selectedIngredients.filter(function(id) {
+    return state.data.ingredients.some(function(item) { return item.id === id; });
+  });
+  persistLocalMirrors();
   populateIngredientCategoryOptions();
   populateRecipeCategoryOptions();
+  updateBackendStatus(options.statusText, options.source);
   renderAll();
 }
 
-function persistAppData() {
+async function syncFromBackend(successText) {
+  const remotePayload = await tryLoadBackendState();
+  if (!remotePayload) {
+    updateBackendStatus('โหลดข้อมูลจาก Google Sheet ไม่สำเร็จ กรุณาเช็ก URL และการ Deploy', 'error');
+    return;
+  }
+
+  applyLoadedState(remotePayload, {
+    source: 'remote',
+    statusText: successText || 'โหลดข้อมูลล่าสุดจาก Google Sheet แล้ว',
+  });
+}
+
+async function tryLoadBackendState() {
+  try {
+    return await loadBackendState();
+  } catch (error) {
+    console.error(error);
+    return null;
+  }
+}
+
+function loadBackendState() {
+  const callbackName = 'foodMenuJsonp_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+  const src = buildBackendGetUrl({
+    api: '1',
+    action: 'bootstrap',
+    callback: callbackName,
+    t: String(Date.now()),
+  });
+
+  return new Promise(function(resolve, reject) {
+    const script = document.createElement('script');
+    const cleanup = function() {
+      delete window[callbackName];
+      script.remove();
+    };
+
+    window[callbackName] = function(response) {
+      cleanup();
+      if (!response || response.ok === false) {
+        reject(new Error(response && response.error ? response.error : 'Backend error'));
+        return;
+      }
+      resolve(response.data || response);
+    };
+
+    script.onerror = function() {
+      cleanup();
+      reject(new Error('โหลดข้อมูลจาก Apps Script ไม่สำเร็จ'));
+    };
+
+    script.src = src;
+    document.body.appendChild(script);
+  });
+}
+
+async function submitBackendAction(action, payload) {
+  const form = document.getElementById('sheetPostForm');
+  const iframe = document.getElementById('sheetPostTarget');
+
+  form.action = state.backendUrl;
+  document.getElementById('sheetPostAction').value = action;
+  document.getElementById('sheetPostPayload').value = JSON.stringify(payload || {});
+
+  await new Promise(function(resolve, reject) {
+    let settled = false;
+    const timeout = window.setTimeout(function() {
+      if (settled) return;
+      settled = true;
+      reject(new Error('ส่งข้อมูลไป Google Sheet ไม่สำเร็จ'));
+    }, 15000);
+
+    const onLoad = function() {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      iframe.removeEventListener('load', onLoad);
+      resolve();
+    };
+
+    iframe.addEventListener('load', onLoad, { once: true });
+    form.submit();
+  });
+
+  await syncFromBackend();
+}
+
+function loadLocalAppData() {
+  try {
+    return JSON.parse(localStorage.getItem(APP_DATA_KEY) || 'null');
+  } catch (error) {
+    return null;
+  }
+}
+
+function loadLocalOrderHistory() {
+  try {
+    return JSON.parse(localStorage.getItem(ORDER_HISTORY_KEY) || '[]');
+  } catch (error) {
+    return [];
+  }
+}
+
+function persistLocalMirrors() {
   localStorage.setItem(APP_DATA_KEY, JSON.stringify(toRawData(state.data)));
+  localStorage.setItem(ORDER_HISTORY_KEY, JSON.stringify(state.orderHistory));
+}
+
+function getStoredBackendUrl() {
+  return normalizeBackendUrl(localStorage.getItem(BACKEND_URL_KEY) || '');
+}
+
+function normalizeBackendUrl(value) {
+  return String(value || '').trim();
+}
+
+function buildBackendGetUrl(params) {
+  const url = new URL(state.backendUrl);
+  Object.keys(params).forEach(function(key) {
+    url.searchParams.set(key, params[key]);
+  });
+  return url.toString();
+}
+
+function updateBackendStatus(text, mode) {
+  const node = document.getElementById('backendStatusText');
+  node.textContent = text;
+  node.dataset.mode = mode;
 }
 
 function toRawData(data) {
@@ -156,7 +321,7 @@ function toRawData(data) {
         id: item.id,
         name: item.name,
         category: item.category,
-        stockQty: 1,
+        stockQty: 0,
         unit: item.unit,
         purchasePrice: item.purchasePrice,
         imageUrl: item.imageUrl || '',
@@ -199,16 +364,6 @@ function transformData(payload) {
   }));
 
   const recipes = (payload.recipes || []).map(function(recipe) {
-    const items = (recipe.items || []).map(function(item) {
-      const ingredient = ingredientMap[item.ingredientId] || {};
-      return {
-        ingredientId: item.ingredientId,
-        ingredientName: ingredient.name || 'ไม่ทราบชื่อ',
-        unit: ingredient.unit || '',
-        requiredQty: 1,
-      };
-    });
-
     return {
       id: recipe.id,
       name: recipe.name,
@@ -218,11 +373,22 @@ function transformData(payload) {
       ingredientsText: recipe.ingredientsText || '',
       methodText: recipe.methodText || '',
       youtubeUrl: recipe.youtubeUrl || '',
-      items: items,
+      items: (recipe.items || []).map(function(item) {
+        const ingredient = ingredientMap[item.ingredientId] || {};
+        return {
+          ingredientId: item.ingredientId,
+          ingredientName: ingredient.name || 'ไม่ทราบชื่อ',
+          unit: ingredient.unit || '',
+          requiredQty: 1,
+        };
+      }),
     };
   });
 
-  return { ingredients: ingredients, recipes: recipes };
+  return {
+    ingredients: ingredients,
+    recipes: recipes,
+  };
 }
 
 function populateIngredientCategoryOptions() {
@@ -264,8 +430,9 @@ function renderAll() {
 }
 
 function renderSummary() {
+  const todayKey = getDateKeyFromDate(new Date());
   const todayMenuCount = state.orderHistory
-    .filter(function(order) { return order.dateKey === getDateKeyFromDate(new Date()); })
+    .filter(function(order) { return order.dateKey === todayKey; })
     .reduce(function(sum, order) { return sum + order.items.length; }, 0);
 
   const cards = [
@@ -282,7 +449,6 @@ function renderSummary() {
 function renderRecipes() {
   const search = normalizeText(document.getElementById('recipeSearch').value);
   const category = document.getElementById('recipeCategoryFilter').value;
-  const status = document.getElementById('recipeStatus').value;
   const container = document.getElementById('recipeList');
   const template = document.getElementById('recipeCardTemplate');
 
@@ -290,8 +456,7 @@ function renderRecipes() {
     const haystack = normalizeText([recipe.name, recipe.category, recipe.notes, recipe.ingredientsText, recipe.methodText].join(' '));
     const matchesText = !search || haystack.includes(search);
     const matchesCategory = category === 'all' || recipe.category === category;
-    const matchesStatus = status === 'need-buy' ? false : true;
-    return matchesText && matchesCategory && matchesStatus;
+    return matchesText && matchesCategory;
   });
 
   if (!recipes.length) {
@@ -354,24 +519,17 @@ function renderIngredients() {
 
   list.innerHTML = ingredients.map(function(item) {
     const uses = recipeUsage[item.id] || [];
-    return `
-      <article class="card simple-item">
-        <div class="title-row">
-          <h3>${escapeHtml(item.name)}</h3>
-          <span>${escapeHtml(item.unit || '-')}</span>
-        </div>
-        <div class="meta-row">
-          <span>${escapeHtml(item.category || 'ไม่ระบุหมวด')}</span>
-          <span>${formatCurrency(item.purchasePrice || 0)}</span>
-        </div>
-        <p class="notes">${escapeHtml(item.notes || '')}</p>
-        <div class="chips">
-          ${uses.length ? uses.map(function(name) {
-            return '<span class="chip">' + escapeHtml(name) + '</span>';
-          }).join('') : '<span class="chip warn">ยังไม่ถูกใช้ในเมนู</span>'}
-        </div>
-      </article>
-    `;
+    return [
+      '<article class="card simple-item">',
+      '<div class="title-row"><h3>' + escapeHtml(item.name) + '</h3><span>' + escapeHtml(item.unit || '-') + '</span></div>',
+      '<div class="meta-row"><span>' + escapeHtml(item.category || 'ไม่ระบุหมวด') + '</span><span>' + formatCurrency(item.purchasePrice || 0) + '</span></div>',
+      '<p class="notes">' + escapeHtml(item.notes || '') + '</p>',
+      '<div class="chips">',
+      uses.length
+        ? uses.map(function(name) { return '<span class="chip">' + escapeHtml(name) + '</span>'; }).join('')
+        : '<span class="chip warn">ยังไม่ถูกใช้ในเมนู</span>',
+      '</div></article>',
+    ].join('');
   }).join('');
 }
 
@@ -379,7 +537,9 @@ function buildRecipeUsageMap() {
   const usage = {};
   state.data.recipes.forEach(function(recipe) {
     recipe.items.forEach(function(item) {
-      if (!usage[item.ingredientId]) usage[item.ingredientId] = [];
+      if (!usage[item.ingredientId]) {
+        usage[item.ingredientId] = [];
+      }
       usage[item.ingredientId].push(recipe.name);
     });
   });
@@ -392,25 +552,21 @@ function renderCart() {
     cartList.innerHTML = '<div class="empty-state">ยังไม่มีเมนูในตะกร้าออเดอร์</div>';
   } else {
     cartList.innerHTML = state.cart.map(function(item, index) {
-      return `
-        <div class="cart-item">
-          <strong>${escapeHtml(item.name)}</strong>
-          <div class="meta-row">
-            <span>${escapeHtml(String(item.qty))} จาน</span>
-            <span>เลือกแล้ว</span>
-          </div>
-          <div class="chips">
-            ${item.items.map(function(ingredient) {
-              return '<span class="chip">' + escapeHtml(ingredient.ingredientName) + '</span>';
-            }).join('')}
-          </div>
-          <div class="actions">
-            <button class="secondary" type="button" onclick="changeOrderQty(${index}, 1)">+1</button>
-            <button class="secondary" type="button" onclick="changeOrderQty(${index}, -1)">-1</button>
-            <button class="ghost" type="button" onclick="removeCartItem(${index})">ลบ</button>
-          </div>
-        </div>
-      `;
+      return [
+        '<div class="cart-item">',
+        '<strong>' + escapeHtml(item.name) + '</strong>',
+        '<div class="meta-row"><span>' + escapeHtml(String(item.qty)) + ' จาน</span><span>เลือกแล้ว</span></div>',
+        '<div class="chips">',
+        item.items.map(function(ingredient) {
+          return '<span class="chip">' + escapeHtml(ingredient.ingredientName) + '</span>';
+        }).join(''),
+        '</div>',
+        '<div class="actions">',
+        '<button class="secondary" type="button" onclick="changeOrderQty(' + index + ', 1)">+1</button>',
+        '<button class="secondary" type="button" onclick="changeOrderQty(' + index + ', -1)">-1</button>',
+        '<button class="ghost" type="button" onclick="removeCartItem(' + index + ')">ลบ</button>',
+        '</div></div>',
+      ].join('');
     }).join('');
   }
 
@@ -428,37 +584,31 @@ function renderDailyOrders() {
   }
 
   const grouped = state.orderHistory.reduce(function(map, order) {
-    if (!map[order.dateKey]) map[order.dateKey] = [];
+    if (!map[order.dateKey]) {
+      map[order.dateKey] = [];
+    }
     map[order.dateKey].push(order);
     return map;
   }, {});
 
   container.innerHTML = Object.keys(grouped).sort().reverse().map(function(dateKey) {
-    return `
-      <section class="daily-order-group">
-        <div class="daily-order-head">
-          <h3>${escapeHtml(formatDateLabel(dateKey))}</h3>
-          <span class="chip">${grouped[dateKey].length} ออเดอร์</span>
-        </div>
-        <div class="daily-order-list">
-          ${grouped[dateKey].map(function(order) {
-            return `
-              <article class="daily-order-item">
-                <div class="title-row">
-                  <strong>${escapeHtml(order.timeLabel)}</strong>
-                  <button class="ghost small-button" type="button" onclick="removeHistoryOrder('${escapeHtml(order.id)}')">ลบ</button>
-                </div>
-                <div class="chips">
-                  ${order.items.map(function(item) {
-                    return '<span class="chip">' + escapeHtml(item.name + ' x ' + item.qty) + '</span>';
-                  }).join('')}
-                </div>
-              </article>
-            `;
-          }).join('')}
-        </div>
-      </section>
-    `;
+    return [
+      '<section class="daily-order-group">',
+      '<div class="daily-order-head"><h3>' + escapeHtml(formatDateLabel(dateKey)) + '</h3><span class="chip">' + grouped[dateKey].length + ' ออเดอร์</span></div>',
+      '<div class="daily-order-list">',
+      grouped[dateKey].map(function(order) {
+        return [
+          '<article class="daily-order-item">',
+          '<div class="title-row"><strong>' + escapeHtml(order.timeLabel) + '</strong><button class="ghost small-button" type="button" onclick="removeHistoryOrder(\'' + escapeHtml(order.id) + '\')">ลบ</button></div>',
+          '<div class="chips">',
+          order.items.map(function(item) {
+            return '<span class="chip">' + escapeHtml(item.name + ' x ' + item.qty) + '</span>';
+          }).join(''),
+          '</div></article>',
+        ].join('');
+      }).join(''),
+      '</div></section>',
+    ].join('');
   }).join('');
 }
 
@@ -489,18 +639,16 @@ function renderAvailableMenus() {
   document.getElementById('availableMenuCount').textContent = availableMenus.length + ' เมนู';
   document.getElementById('availableMenuList').innerHTML = availableMenus.length
     ? availableMenus.map(function(recipe) {
-      return `
-        <div class="menu-list-item">
-          <h4>${escapeHtml(recipe.name)}</h4>
-          <div class="meta-row">
-            <span>${escapeHtml(recipe.category || 'ไม่ระบุประเภท')}</span>
-            <span>วัตถุดิบหลัก ${recipe.items.filter(function(item) {
-              const ingredient = state.data.ingredients.find(function(entry) { return entry.id === item.ingredientId; });
-              return isCoreShareIngredient(ingredient);
-            }).length} รายการ</span>
-          </div>
-        </div>
-      `;
+      const coreCount = recipe.items.filter(function(item) {
+        const ingredient = state.data.ingredients.find(function(entry) { return entry.id === item.ingredientId; });
+        return isCoreShareIngredient(ingredient);
+      }).length;
+      return [
+        '<div class="menu-list-item">',
+        '<h4>' + escapeHtml(recipe.name) + '</h4>',
+        '<div class="meta-row"><span>' + escapeHtml(recipe.category || 'ไม่ระบุประเภท') + '</span><span>วัตถุดิบหลัก ' + coreCount + ' รายการ</span></div>',
+        '</div>',
+      ].join('');
     }).join('')
     : '<div class="empty-state">ยังไม่มีเมนูที่ตรงกับวัตถุดิบที่เลือก</div>';
 
@@ -545,12 +693,12 @@ function appendRecipeIngredientRow(selectedId) {
   const container = document.getElementById('recipeIngredientEditor');
   const row = document.createElement('div');
   row.className = 'ingredient-editor-item';
-  row.innerHTML = `
-    <select class="ingredient-select">
-      ${buildIngredientOptions(selectedId, false)}
-    </select>
-    <button class="ghost remove-ingredient-row" type="button">ลบ</button>
-  `;
+  row.innerHTML = [
+    '<select class="ingredient-select">',
+    buildIngredientOptions(selectedId, false),
+    '</select>',
+    '<button class="ghost remove-ingredient-row" type="button">ลบ</button>',
+  ].join('');
 
   row.querySelector('.remove-ingredient-row').addEventListener('click', function() {
     const rows = container.querySelectorAll('.ingredient-editor-item');
@@ -583,7 +731,7 @@ function closeRecipeDialog() {
   state.editingRecipeId = null;
 }
 
-function saveRecipeFromDialog() {
+async function saveRecipeFromDialog() {
   const name = document.getElementById('recipeNameInput').value.trim();
   if (!name) {
     alert('กรุณาใส่ชื่อเมนู');
@@ -604,7 +752,7 @@ function saveRecipeFromDialog() {
   }
 
   const recipeRecord = {
-    id: state.editingRecipeId || 'REC' + Date.now(),
+    id: state.editingRecipeId || ('REC' + Date.now()),
     name: name,
     category: document.getElementById('recipeCategoryInput').value.trim(),
     imageUrl: document.getElementById('recipeImageInput').value.trim(),
@@ -615,19 +763,27 @@ function saveRecipeFromDialog() {
     items: items,
   };
 
-  const recipes = toRawData(state.data).recipes;
-  const index = recipes.findIndex(function(recipe) { return recipe.id === recipeRecord.id; });
-  if (index >= 0) recipes[index] = recipeRecord;
-  else recipes.push(recipeRecord);
+  if (state.backendUrl) {
+    await submitBackendAction('saveRecipe', recipeRecord);
+  } else {
+    const raw = toRawData(state.data);
+    const index = raw.recipes.findIndex(function(item) { return item.id === recipeRecord.id; });
+    if (index >= 0) {
+      raw.recipes[index] = recipeRecord;
+    } else {
+      raw.recipes.push(recipeRecord);
+    }
+    applyLoadedState({
+      ingredients: raw.ingredients,
+      recipes: raw.recipes,
+      orderHistory: state.orderHistory,
+    }, {
+      source: 'local',
+      statusText: 'บันทึกเมนูในเครื่องแล้ว',
+    });
+  }
 
-  state.data = transformData({
-    ingredients: toRawData(state.data).ingredients,
-    recipes: recipes,
-  });
-  populateRecipeCategoryOptions();
-  persistAppData();
   closeRecipeDialog();
-  renderAll();
 }
 
 function openIngredientDialog(context) {
@@ -645,7 +801,7 @@ function closeIngredientDialog() {
   document.getElementById('ingredientDialog').close();
 }
 
-function saveIngredientFromDialog() {
+async function saveIngredientFromDialog() {
   const name = document.getElementById('ingredientNameInput').value.trim();
   if (!name) {
     alert('กรุณาใส่ชื่อวัตถุดิบ');
@@ -656,19 +812,28 @@ function saveIngredientFromDialog() {
     id: 'ING' + Date.now(),
     name: name,
     category: document.getElementById('ingredientCategoryInput').value.trim() || 'อื่นๆ',
-    stockQty: 1,
+    stockQty: 0,
     unit: document.getElementById('ingredientUnitInput').value.trim(),
     purchasePrice: Number(document.getElementById('ingredientPriceInput').value || 0),
     imageUrl: '',
     notes: document.getElementById('ingredientNotesInput').value.trim(),
   };
 
-  const raw = toRawData(state.data);
-  raw.ingredients.push(ingredient);
-  state.data = transformData(raw);
-  populateIngredientCategoryOptions();
-  populateRecipeCategoryOptions();
-  persistAppData();
+  if (state.backendUrl) {
+    await submitBackendAction('saveIngredient', ingredient);
+  } else {
+    const raw = toRawData(state.data);
+    raw.ingredients.push(ingredient);
+    applyLoadedState({
+      ingredients: raw.ingredients,
+      recipes: raw.recipes,
+      orderHistory: state.orderHistory,
+    }, {
+      source: 'local',
+      statusText: 'บันทึกวัตถุดิบในเครื่องแล้ว',
+    });
+  }
+
   closeIngredientDialog();
 
   if (state.ingredientDialogContext === 'recipe') {
@@ -677,9 +842,8 @@ function saveIngredientFromDialog() {
     if (!state.selectedIngredients.includes(ingredient.id)) {
       state.selectedIngredients.push(ingredient.id);
     }
+    renderAll();
   }
-
-  renderAll();
 }
 
 function openShareIngredientDialog() {
@@ -702,12 +866,12 @@ function renderShareIngredientChecklist() {
   container.innerHTML = ingredients.length
     ? ingredients.map(function(item) {
       const checked = state.selectedIngredients.includes(item.id) ? 'checked' : '';
-      return `
-        <label class="ingredient-check">
-          <input type="checkbox" value="${escapeHtml(item.id)}" ${checked}>
-          <span>${escapeHtml(item.name)} <small>(${escapeHtml(item.unit || 'หน่วย')})</small></span>
-        </label>
-      `;
+      return [
+        '<label class="ingredient-check">',
+        '<input type="checkbox" value="' + escapeHtml(item.id) + '" ' + checked + '>',
+        '<span>' + escapeHtml(item.name) + ' <small>(' + escapeHtml(item.unit || 'หน่วย') + ')</small></span>',
+        '</label>',
+      ].join('');
     }).join('')
     : '<div class="empty-state">ไม่พบวัตถุดิบ</div>';
 }
@@ -728,32 +892,23 @@ function openRecipeDetail(recipeId) {
 
   const youtubeEmbedUrl = toYoutubeEmbedUrl(recipe.youtubeUrl);
   document.getElementById('recipeDetailTitle').textContent = recipe.name;
-  document.getElementById('recipeDetailBody').innerHTML = `
-    <div class="detail-grid">
-      <img class="detail-image" src="${escapeHtml(recipe.imageUrl || createPlaceholderImage())}" alt="${escapeHtml(recipe.name)}" loading="lazy" decoding="async">
-      <div class="meta-row">
-        <span>${escapeHtml(recipe.category || 'ไม่ระบุประเภท')}</span>
-        <span class="price">พร้อมดูสูตร</span>
-      </div>
-      ${recipe.notes ? '<p class="detail-note">' + escapeHtml(recipe.notes) + '</p>' : ''}
-      <div class="detail-section">
-        <h4>วัตถุดิบที่ใช้</h4>
-        <div class="menu-list">
-          ${recipe.items.map(function(item) {
-            return '<div class="detail-ingredient"><strong>' + escapeHtml(item.ingredientName) + '</strong></div>';
-          }).join('')}
-        </div>
-      </div>
-      ${recipe.ingredientsText ? '<div class="detail-section"><h4>วัตถุดิบ</h4><div class="detail-longtext">' + formatLongText(recipe.ingredientsText) + '</div></div>' : ''}
-      ${recipe.methodText ? '<div class="detail-section"><h4>วิธีทำ</h4><div class="detail-longtext">' + formatLongText(recipe.methodText) + '</div></div>' : ''}
-      ${youtubeEmbedUrl ? '<div class="detail-section"><h4>วิดีโอ YouTube</h4><div class="video-embed"><iframe src="' + escapeHtml(youtubeEmbedUrl) + '" title="' + escapeHtml('วิดีโอ ' + recipe.name) + '" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div></div>' : ''}
-      ${recipe.youtubeUrl ? '<a class="ghost inline-link" href="' + escapeHtml(recipe.youtubeUrl) + '" target="_blank" rel="noopener noreferrer">เปิดดูบน YouTube</a>' : ''}
-      <div class="actions">
-        <button class="secondary" type="button" onclick="openRecipeDialog('${recipe.id}')">แก้ไขเมนูนี้</button>
-        <button class="primary" type="button" onclick="handleDetailAddToCart('${recipe.id}')">เพิ่มในตะกร้า</button>
-      </div>
-    </div>
-  `;
+  document.getElementById('recipeDetailBody').innerHTML = [
+    '<div class="detail-grid">',
+    '<img class="detail-image" src="' + escapeHtml(recipe.imageUrl || createPlaceholderImage()) + '" alt="' + escapeHtml(recipe.name) + '" loading="lazy" decoding="async">',
+    '<div class="meta-row"><span>' + escapeHtml(recipe.category || 'ไม่ระบุประเภท') + '</span><span class="price">พร้อมดูสูตร</span></div>',
+    recipe.notes ? '<p class="detail-note">' + escapeHtml(recipe.notes) + '</p>' : '',
+    '<div class="detail-section"><h4>วัตถุดิบที่ใช้</h4><div class="menu-list">' +
+      recipe.items.map(function(item) {
+        return '<div class="detail-ingredient"><strong>' + escapeHtml(item.ingredientName) + '</strong></div>';
+      }).join('') +
+    '</div></div>',
+    recipe.ingredientsText ? '<div class="detail-section"><h4>วัตถุดิบ</h4><div class="detail-longtext">' + formatLongText(recipe.ingredientsText) + '</div></div>' : '',
+    recipe.methodText ? '<div class="detail-section"><h4>วิธีทำ</h4><div class="detail-longtext">' + formatLongText(recipe.methodText) + '</div></div>' : '',
+    youtubeEmbedUrl ? '<div class="detail-section"><h4>วิดีโอ YouTube</h4><div class="video-embed"><iframe src="' + escapeHtml(youtubeEmbedUrl) + '" title="' + escapeHtml('วิดีโอ ' + recipe.name) + '" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div></div>' : '',
+    recipe.youtubeUrl ? '<a class="ghost inline-link" href="' + escapeHtml(recipe.youtubeUrl) + '" target="_blank" rel="noopener noreferrer">เปิดดูบน YouTube</a>' : '',
+    '<div class="actions"><button class="secondary" type="button" onclick="openRecipeDialog(\'' + recipe.id + '\')">แก้ไขเมนูนี้</button><button class="primary" type="button" onclick="handleDetailAddToCart(\'' + recipe.id + '\')">เพิ่มในตะกร้า</button></div>',
+    '</div>',
+  ].join('');
   document.getElementById('recipeDetailDialog').showModal();
 }
 
@@ -780,48 +935,67 @@ function addRecipeToOrder(recipe) {
   });
 }
 
-function saveCurrentOrder() {
+async function saveCurrentOrder() {
   if (!state.cart.length) {
     alert('ยังไม่มีออเดอร์ให้บันทึก');
     return;
   }
 
   const now = new Date();
-  state.orderHistory.unshift({
+  const order = {
     id: 'ORD' + now.getTime(),
     dateKey: getDateKeyFromDate(now),
     timeLabel: now.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }),
     items: state.cart.map(function(item) {
       return { name: item.name, qty: item.qty };
     }),
-  });
-  persistOrderHistory();
+  };
+
+  if (state.backendUrl) {
+    await submitBackendAction('saveOrder', order);
+  } else {
+    state.orderHistory.unshift(order);
+    persistLocalMirrors();
+    updateBackendStatus('บันทึกออเดอร์ในเครื่องแล้ว', 'local');
+  }
+
   state.cart = [];
   setTab('daily-orders');
   renderAll();
 }
 
-function clearOrderHistory() {
+async function clearOrderHistory() {
   if (!state.orderHistory.length) return;
   if (!window.confirm('ต้องการล้างประวัติออเดอร์ทั้งหมดหรือไม่')) return;
-  state.orderHistory = [];
-  persistOrderHistory();
-  renderAll();
+
+  if (state.backendUrl) {
+    await submitBackendAction('clearOrders', {});
+  } else {
+    state.orderHistory = [];
+    persistLocalMirrors();
+    renderAll();
+  }
 }
 
-function removeHistoryOrder(orderId) {
-  state.orderHistory = state.orderHistory.filter(function(order) {
-    return order.id !== orderId;
-  });
-  persistOrderHistory();
-  renderAll();
+async function removeHistoryOrder(orderId) {
+  if (state.backendUrl) {
+    await submitBackendAction('deleteOrder', { id: orderId });
+  } else {
+    state.orderHistory = state.orderHistory.filter(function(order) {
+      return order.id !== orderId;
+    });
+    persistLocalMirrors();
+    renderAll();
+  }
 }
 
 function changeOrderQty(index, delta) {
   const item = state.cart[index];
   if (!item) return;
   item.qty += delta;
-  if (item.qty <= 0) state.cart.splice(index, 1);
+  if (item.qty <= 0) {
+    state.cart.splice(index, 1);
+  }
   renderAll();
 }
 
@@ -844,18 +1018,27 @@ function getMenusFromSelectedIngredients(selectedIds) {
 }
 
 function isCoreShareIngredient(ingredient) {
-  return CORE_SHARE_CATEGORIES.has(String(ingredient && ingredient.category || '').trim());
+  return CORE_SHARE_CATEGORIES.has(String((ingredient && ingredient.category) || '').trim());
 }
 
 function buildLineShareText(selectedIngredients, availableMenus, totalSelected) {
   const ingredientLines = selectedIngredients.length
     ? selectedIngredients.map(function(item) { return '- ' + item.name; }).join('\n')
     : '- ยังไม่ได้เลือกวัตถุดิบ';
+
   const menuLines = availableMenus.length
     ? availableMenus.map(function(recipe) { return '- ' + recipe.name; }).join('\n')
     : '- ยังไม่มีเมนูที่ทำได้จากวัตถุดิบที่เลือก';
 
-  return ['สรุปวัตถุดิบที่มีตอนนี้', 'เลือกไว้ ' + totalSelected + ' รายการ', '', ingredientLines, '', 'เมนูที่ทำได้', menuLines].join('\n');
+  return [
+    'สรุปวัตถุดิบที่มีตอนนี้',
+    'เลือกไว้ ' + totalSelected + ' รายการ',
+    '',
+    ingredientLines,
+    '',
+    'เมนูที่ทำได้',
+    menuLines,
+  ].join('\n');
 }
 
 function buildOrderLineText() {
@@ -902,11 +1085,11 @@ async function copyTextFromNode(nodeId, button, defaultLabel, successLabel) {
   try {
     await navigator.clipboard.writeText(document.getElementById(nodeId).value);
     button.textContent = successLabel;
-    setTimeout(function() {
+    window.setTimeout(function() {
       button.textContent = defaultLabel;
     }, 1500);
   } catch (error) {
-    alert('คัดลอกไม่สำเร็จ ลองคัดลอกด้วยตัวเองจากกล่องข้อความ');
+    alert('คัดลอกไม่สำเร็จ ลองคัดลอกจากกล่องข้อความเองอีกครั้ง');
   }
 }
 
@@ -962,5 +1145,11 @@ function toYoutubeEmbedUrl(url) {
 }
 
 function createPlaceholderImage() {
-  return 'https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=900&q=70';
+  return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80';
 }
+
+window.openRecipeDialog = openRecipeDialog;
+window.handleDetailAddToCart = handleDetailAddToCart;
+window.changeOrderQty = changeOrderQty;
+window.removeCartItem = removeCartItem;
+window.removeHistoryOrder = removeHistoryOrder;

@@ -1,39 +1,41 @@
-# Netlify Menu App
+# Food Menu Planner Frontend
 
-เวอร์ชันนี้เป็น static web app สำหรับโยนขึ้น Netlify โดยเน้นโหลดเร็วและหน้าตาคล้ายเมนูร้านอาหาร
+โปรเจกต์นี้เป็น frontend สำหรับ deploy บน Cloudflare Pages หรือ Netlify โดยทำงานร่วมกับ Google Sheets ผ่าน Google Apps Script web app
 
-## จุดเด่น
+## โครงสร้าง
 
-- เปิดมาจะเจอเมนูอาหารก่อน
-- ใช้ไฟล์ JSON local ทำให้โหลดเร็วกว่าเวอร์ชัน Apps Script
-- รูปใช้ `loading="lazy"` และ `decoding="async"`
-- ไม่มี `google.script.run` จึงเหมาะกับ static hosting
+- `index.html` หน้าแอปหลัก
+- `styles.css` style ทั้งระบบ
+- `app.js` logic ฝั่ง frontend
+- `data/menu-data.json` ข้อมูลตั้งต้นสำหรับ fallback
 
-## วิธี deploy บน Netlify
+## วิธีใช้งานร่วมกับ Google Sheet backend
 
-1. เปิด [Netlify](https://www.netlify.com/)
-2. ลากทั้งโฟลเดอร์ `netlify-menu-app` ขึ้นหน้า deploy
-3. หรือเชื่อมกับ Git repo แล้วตั้ง publish directory เป็น `netlify-menu-app`
+1. Deploy โฟลเดอร์นี้ขึ้น Cloudflare Pages
+2. Deploy โฟลเดอร์ `food-menu-app` เป็น Google Apps Script web app
+3. เปิดหน้าเว็บที่ deploy แล้ว
+4. วาง `Apps Script Web App URL` ลงในกล่องบนหน้าแรก
+5. กด `เชื่อม Google Sheet`
 
-## ถ้าจะเปลี่ยนข้อมูลเมนู
+เมื่อเชื่อมสำเร็จ:
 
-แก้ไฟล์:
+- โหลดเมนูและวัตถุดิบจาก Google Sheet
+- เพิ่มหรือแก้เมนูแล้วข้อมูลจะไม่หายหลัง deploy ใหม่
+- บันทึกออเดอร์รายวันลง Google Sheet ได้
 
-- `data/menu-data.json`
+## ถ้ายังไม่เชื่อม backend
 
-## ข้อสำคัญ
+แอปจะ fallback ไปใช้ข้อมูลในเครื่องชั่วคราวผ่าน `localStorage`
 
-เวอร์ชันนี้ยังไม่ได้เขียนกลับ Google Sheets โดยตรง
+## Deploy บน Cloudflare Pages
 
-ถ้าต้องการทั้ง:
+ค่าพื้นฐานที่ใช้ได้:
 
-- host บน Netlify
-- และแก้ข้อมูลแล้ว sync เข้า Google Sheets
+- `Framework preset`: `None`
+- `Build command`: เว้นว่าง หรือ `exit 0`
+- `Build output directory`: `.`
 
-ต้องมี backend API เพิ่มอีกชั้น เช่น:
+## หมายเหตุ
 
-1. Apps Script API
-2. Netlify Functions
-3. Supabase / Firebase / SheetDB
-
-ถ้าต้องการ ผมช่วยทำ phase ต่อไปให้เป็น `Netlify + Google Sheets API bridge` ได้
+- หาก Apps Script URL เปลี่ยน ให้ paste URL ใหม่แล้วกดเชื่อมอีกครั้ง
+- ถ้าเชื่อมไม่สำเร็จ แอปจะยังเปิดได้ แต่จะกลับไปใช้ข้อมูลในเครื่องแทน

@@ -15,6 +15,18 @@
           <p class="eyebrow">Food Menu Planner</p>
           <h1>กินอะไรดีคะ?</h1>
           <p class="hero-text">เลือกเมนูแบบร้านอาหาร เพิ่มวัตถุดิบได้เอง จัดตะกร้าออเดอร์ เก็บออเดอร์รายวัน และแชร์เข้ากลุ่ม LINE ได้ในหน้าเดียว</p>
+          <div class="backend-connect">
+            <label class="field backend-field">
+              <span>Apps Script Web App URL</span>
+              <input id="backendUrlInput" type="url" placeholder="https://script.google.com/macros/s/.../exec">
+            </label>
+            <div class="actions">
+              <button class="primary" id="saveBackendUrlBtn" type="button">เชื่อม Google Sheet</button>
+              <button class="secondary" id="syncBackendBtn" type="button">โหลดข้อมูลล่าสุด</button>
+              <button class="ghost" id="disconnectBackendBtn" type="button">ยกเลิกการเชื่อม</button>
+            </div>
+            <p class="backend-status" id="backendStatusText">ยังไม่ได้เชื่อม Google Sheet ตอนนี้แอปจะใช้ข้อมูลในเครื่องชั่วคราว</p>
+          </div>
         </div>
         <div class="hero-stats" id="summaryCards"></div>
       </header>
@@ -40,11 +52,6 @@
             <input id="recipeSearch" type="search" placeholder="ค้นหาเมนู หรือประเภทอาหาร">
             <select id="recipeCategoryFilter">
               <option value="all">ทุกหมวดหมู่</option>
-            </select>
-            <select id="recipeStatus">
-              <option value="all">ทุกสถานะ</option>
-              <option value="cookable">ทำได้เลย</option>
-              <option value="need-buy">ต้องซื้อเพิ่ม</option>
             </select>
           </div>
           <div class="recipe-grid" id="recipeList"></div>
@@ -266,6 +273,12 @@
 
     <datalist id="ingredientCategorySuggestions"></datalist>
     <datalist id="recipeCategorySuggestions"></datalist>
+
+    <iframe name="sheetPostTarget" id="sheetPostTarget" class="hidden-frame" title="sheet post target"></iframe>
+    <form id="sheetPostForm" class="hidden-frame" method="post" target="sheetPostTarget">
+      <input type="hidden" name="action" id="sheetPostAction">
+      <input type="hidden" name="payload" id="sheetPostPayload">
+    </form>
 
     <template id="recipeCardTemplate">
       <article class="card recipe-card">
