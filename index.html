@@ -3,8 +3,12 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Food Menu Planner</title>
-    <meta name="description" content="เว็บเมนูอาหารพร้อมวัตถุดิบ ตะกร้าออเดอร์ ออเดอร์รายวัน และแชร์ LINE">
+    <title>กินอะไรดีคะ?</title>
+    <meta name="description" content="แอปเมนูอาหารพร้อมวัตถุดิบ ตะกร้าออเดอร์ ออเดอร์รายวัน และแชร์ LINE">
+    <meta name="theme-color" content="#c75b30">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="icon" type="image/png" href="./assets/app-icon.png">
+    <link rel="apple-touch-icon" href="./assets/app-icon.png">
     <link rel="preconnect" href="https://images.unsplash.com">
     <link rel="stylesheet" href="./styles.css">
   </head>
@@ -12,9 +16,9 @@
     <div class="shell">
       <header class="hero">
         <div class="hero-copy">
-          <p class="eyebrow">Food Menu Planner</p>
+          <p class="eyebrow">KIN ARAI DEE KA</p>
           <h1>กินอะไรดีคะ?</h1>
-          <p class="hero-text">เลือกเมนูแบบร้านอาหาร เพิ่มวัตถุดิบได้เอง จัดตะกร้าออเดอร์ เก็บออเดอร์รายวัน และแชร์เข้ากลุ่ม LINE ได้ในหน้าเดียว</p>
+          <p class="hero-text">แอปช่วยเลือกเมนูอาหาร จัดวัตถุดิบ ใส่ตะกร้า เก็บออเดอร์รายวัน และแชร์เข้า LINE ได้ในหน้าเดียว</p>
           <div class="backend-connect is-hidden">
             <label class="field backend-field">
               <span>Apps Script Web App URL</span>
@@ -31,8 +35,9 @@
         <div class="hero-stats" id="summaryCards"></div>
       </header>
 
-      <nav class="tabs">
-        <button class="tab is-active" data-tab="recipes">เมนูอาหาร</button>
+      <nav class="tabs is-hidden">
+        <button class="tab" data-tab="home">เมนูหลัก</button>
+        <button class="tab" data-tab="recipes">เมนูอาหาร</button>
         <button class="tab" data-tab="ingredients">วัตถุดิบ</button>
         <button class="tab" data-tab="cart">ตะกร้าออเดอร์</button>
         <button class="tab" data-tab="daily-orders">ออเดอร์รายวัน</button>
@@ -40,18 +45,57 @@
       </nav>
 
       <main class="content">
-        <section class="panel" data-panel="recipes">
+        <section class="panel" data-panel="home">
+          <div class="home-panel">
+            <div class="home-brand">
+              <img class="home-app-icon" src="./assets/app-icon.png" alt="กินอะไรดีคะ">
+              <div>
+                <span class="section-label">App Menu</span>
+                <h2>เมนูหลัก</h2>
+                <p class="home-copy">เลือกหน้าใช้งานที่ต้องการ แล้วกดกลับเมนูได้ทุกหน้า</p>
+              </div>
+            </div>
+            <div class="home-grid">
+              <button class="home-nav-card" type="button" data-go-tab="recipes">
+                <strong>เมนูอาหาร</strong>
+                <span>ดูเมนู เพิ่มเมนู และจัดการประเภทอาหาร</span>
+              </button>
+              <button class="home-nav-card" type="button" data-go-tab="ingredients">
+                <strong>วัตถุดิบ</strong>
+                <span>เพิ่มวัตถุดิบและดูรายการทั้งหมด</span>
+              </button>
+              <button class="home-nav-card" type="button" data-go-tab="cart">
+                <strong>ตะกร้าออเดอร์</strong>
+                <span>สรุปรายการที่เลือกและส่งเข้า LINE</span>
+              </button>
+              <button class="home-nav-card" type="button" data-go-tab="daily-orders">
+                <strong>ออเดอร์รายวัน</strong>
+                <span>ดูประวัติออเดอร์และรายละเอียดรายการ</span>
+              </button>
+              <button class="home-nav-card" type="button" data-go-tab="share">
+                <strong>เช็กวัตถุดิบ + แชร์ LINE</strong>
+                <span>เลือกวัตถุดิบแล้วดูเมนูที่ทำได้ทันที</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel is-hidden" data-panel="recipes">
           <div class="panel-head">
             <div>
               <span class="section-label">Main Menu</span>
-              <h2>เมนูทั้งหมด</h2>
+              <h2>เมนูอาหาร</h2>
             </div>
-            <button class="primary" id="openAddRecipeBtn" type="button">เพิ่มเมนู</button>
+            <div class="actions compact-actions">
+              <button class="secondary" type="button" data-go-tab="home">กลับเมนู</button>
+              <button class="secondary" id="manageRecipeCategoriesBtn" type="button">จัดการประเภทอาหาร</button>
+              <button class="primary" id="openAddRecipeBtn" type="button">เพิ่มเมนู</button>
+            </div>
           </div>
           <div class="toolbar toolbar-split">
             <input id="recipeSearch" type="search" placeholder="ค้นหาเมนู หรือประเภทอาหาร">
             <select id="recipeCategoryFilter">
-              <option value="all">ทุกหมวดหมู่</option>
+              <option value="all">ทุกประเภทอาหาร</option>
             </select>
           </div>
           <div class="recipe-grid" id="recipeList"></div>
@@ -63,7 +107,10 @@
               <span class="section-label">Ingredients</span>
               <h2>วัตถุดิบทั้งหมด</h2>
             </div>
-            <button class="primary" id="openAddIngredientBtn" type="button">เพิ่มวัตถุดิบ</button>
+            <div class="actions compact-actions">
+              <button class="secondary" type="button" data-go-tab="home">กลับเมนู</button>
+              <button class="primary" id="openAddIngredientBtn" type="button">เพิ่มวัตถุดิบ</button>
+            </div>
           </div>
           <div class="toolbar toolbar-ingredients">
             <input id="ingredientSearch" type="search" placeholder="ค้นหาวัตถุดิบ">
@@ -80,7 +127,10 @@
               <span class="section-label">Order Cart</span>
               <h2>ตะกร้าออเดอร์</h2>
             </div>
-            <button class="secondary" id="clearOrderBtn" type="button">ล้างออเดอร์</button>
+            <div class="actions compact-actions">
+              <button class="secondary" type="button" data-go-tab="home">กลับเมนู</button>
+              <button class="secondary" id="clearOrderBtn" type="button">ล้างออเดอร์</button>
+            </div>
           </div>
           <div class="cart-list" id="cartList"></div>
           <div class="order-share-box" id="orderShareBox">
@@ -100,7 +150,10 @@
               <span class="section-label">Daily Orders</span>
               <h2>ออเดอร์รายวัน</h2>
             </div>
-            <button class="secondary" id="clearHistoryBtn" type="button">ล้างประวัติ</button>
+            <div class="actions compact-actions">
+              <button class="secondary" type="button" data-go-tab="home">กลับเมนู</button>
+              <button class="secondary" id="clearHistoryBtn" type="button">ล้างประวัติ</button>
+            </div>
           </div>
           <div class="simple-grid" id="dailyOrdersList"></div>
         </section>
@@ -111,6 +164,7 @@
               <span class="section-label">Share to LINE</span>
               <h2>เลือกวัตถุดิบที่มี แล้วดูเมนูที่ทำได้</h2>
             </div>
+            <button class="secondary" type="button" data-go-tab="home">กลับเมนู</button>
           </div>
 
           <div class="toolbar toolbar-share-actions">
@@ -214,6 +268,22 @@
       </form>
     </dialog>
 
+    <dialog id="recipeCategoryDialog">
+      <div class="detail-shell">
+        <div class="dialog-head">
+          <h3>จัดการประเภทอาหาร</h3>
+          <button type="button" class="icon-button" id="closeRecipeCategoryDialog">x</button>
+        </div>
+        <div class="category-manager">
+          <div class="category-manager-form">
+            <input id="recipeCategoryManagerInput" type="text" placeholder="เพิ่มประเภทอาหารใหม่">
+            <button class="primary" id="saveRecipeCategoryBtn" type="button">เพิ่มประเภท</button>
+          </div>
+          <div class="menu-list" id="recipeCategoryManagerList"></div>
+        </div>
+      </div>
+    </dialog>
+
     <dialog id="ingredientDialog">
       <form method="dialog" id="ingredientForm">
         <div class="dialog-head">
@@ -288,12 +358,6 @@
 
     <datalist id="ingredientCategorySuggestions"></datalist>
     <datalist id="recipeCategorySuggestions"></datalist>
-
-    <iframe name="sheetPostTarget" id="sheetPostTarget" class="hidden-frame" title="sheet post target"></iframe>
-    <form id="sheetPostForm" class="hidden-frame" method="post" target="sheetPostTarget">
-      <input type="hidden" name="action" id="sheetPostAction">
-      <input type="hidden" name="payload" id="sheetPostPayload">
-    </form>
 
     <template id="recipeCardTemplate">
       <article class="card recipe-card">

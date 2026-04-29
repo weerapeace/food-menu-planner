@@ -1,0 +1,16 @@
+{
+  "name": "กินอะไรดีคะ?",
+  "short_name": "กินอะไรดี",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#fcf7f0",
+  "theme_color": "#c75b30",
+  "icons": [
+    {
+      "src": "./assets/app-icon.png",
+      "sizes": "200x200",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

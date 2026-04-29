@@ -154,6 +154,10 @@ p {
   overflow-x: auto;
 }
 
+.tabs.is-hidden {
+  display: none;
+}
+
 .tab {
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -205,6 +209,62 @@ p {
   gap: 18px;
 }
 
+.home-panel,
+.home-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.home-brand {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, #fff8f1, #ffe8d5);
+  border: 1px solid var(--line);
+}
+
+.home-app-icon {
+  width: 140px;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 30px;
+  box-shadow: 0 18px 30px rgba(79, 54, 34, 0.16);
+}
+
+.home-copy {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.home-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.home-nav-card {
+  display: grid;
+  gap: 10px;
+  padding: 20px;
+  text-align: left;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,245,236,0.96));
+  box-shadow: 0 14px 28px rgba(85, 53, 30, 0.08);
+}
+
+.home-nav-card strong {
+  font-size: 24px;
+  letter-spacing: -0.03em;
+}
+
+.home-nav-card span {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 .panel {
   padding: 20px;
   border-radius: var(--radius-xl);
@@ -221,6 +281,11 @@ p {
   justify-content: space-between;
   gap: 14px;
   margin-bottom: 14px;
+}
+
+.compact-actions {
+  justify-content: flex-end;
+  margin-top: 0;
 }
 
 .panel-head h2 {
@@ -569,6 +634,31 @@ p {
   justify-content: center;
 }
 
+.category-manager,
+.category-manager-form {
+  display: grid;
+  gap: 12px;
+}
+
+.category-manager-form {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.category-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.category-row strong {
+  font-size: 18px;
+}
+
 .detail-longtext {
   padding: 14px;
   border-radius: 16px;
@@ -703,6 +793,7 @@ dialog::backdrop {
   .share-layout,
   .hero-stats,
   .recipe-grid,
+  .home-grid,
   .toolbar-split,
   .toolbar-ingredients,
   .toolbar-share-actions,
@@ -723,6 +814,15 @@ dialog::backdrop {
     padding: 18px;
   }
 
+  .home-brand {
+    grid-template-columns: 1fr;
+  }
+
+  .home-app-icon {
+    width: 120px;
+    height: 120px;
+  }
+
   .panel-head,
   .result-head,
   .meta-row,
@@ -739,6 +839,7 @@ dialog::backdrop {
   .actions > *,
   .result-head > *:last-child,
   .panel-head > *:last-child,
+  .category-manager-form > *,
   .dialog-actions > * {
     width: 100%;
   }
