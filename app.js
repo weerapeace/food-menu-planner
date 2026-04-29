@@ -223,7 +223,12 @@ async function tryLoadBackendState() {
 }
 
 function loadBackendState() {
-  return callBackendAction('bootstrap');
+  return callBackendAction('bootstrap').then(function(response) {
+    if (!response || response.ok === false) {
+      throw new Error(response && response.error ? response.error : 'Backend bootstrap failed');
+    }
+    return response.data || response;
+  });
 }
 
 async function submitBackendAction(action, payload) {
