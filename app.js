@@ -119,6 +119,9 @@ function bindRecipeDialogs() {
   document.getElementById('closeRecipeDetailDialog').addEventListener('click', function() {
     document.getElementById('recipeDetailDialog').close();
   });
+  document.getElementById('closeDailyOrderDetailDialog').addEventListener('click', function() {
+    document.getElementById('dailyOrderDetailDialog').close();
+  });
   document.getElementById('recipeForm').addEventListener('submit', async function(event) {
     event.preventDefault();
     await saveRecipeFromDialog();
@@ -600,7 +603,7 @@ function renderCart() {
 function renderDailyOrders() {
   const container = document.getElementById('dailyOrdersList');
   if (!state.orderHistory.length) {
-    container.innerHTML = '<div class="empty-state">ยังไม่มีออเดอร์ที่บันทึกไว้</div>';
+    container.innerHTML = '<div class="empty-state">???????????????????????????</div>';
     return;
   }
 
@@ -615,17 +618,22 @@ function renderDailyOrders() {
   container.innerHTML = Object.keys(grouped).sort().reverse().map(function(dateKey) {
     return [
       '<section class="daily-order-group">',
-      '<div class="daily-order-head"><h3>' + escapeHtml(formatDateLabel(dateKey)) + '</h3><span class="chip">' + grouped[dateKey].length + ' ออเดอร์</span></div>',
+      '<div class="daily-order-head"><h3>' + escapeHtml(formatDateLabel(dateKey)) + '</h3><span class="chip">' + grouped[dateKey].length + ' ???????</span></div>',
       '<div class="daily-order-list">',
       grouped[dateKey].map(function(order) {
         return [
           '<article class="daily-order-item">',
-          '<div class="title-row"><strong>' + escapeHtml(order.timeLabel) + '</strong><button class="ghost small-button" type="button" onclick="removeHistoryOrder(\'' + escapeHtml(order.id) + '\')">ลบ</button></div>',
+          '<div class="title-row"><strong>' + escapeHtml(order.timeLabel) + '</strong><button class="ghost small-button" type="button" onclick="removeHistoryOrder(\'' + escapeHtml(order.id) + '\')">??</button></div>',
           '<div class="chips">',
           order.items.map(function(item) {
             return '<span class="chip">' + escapeHtml(item.name + ' x ' + item.qty) + '</span>';
           }).join(''),
-          '</div></article>',
+          '</div>',
+          '<div class="actions">',
+          '<button class="secondary" type="button" onclick="openDailyOrderDetail(\'' + escapeHtml(order.id) + '\')">????????????</button>',
+          '<button class="primary" type="button" onclick="shareDailyOrderToLine(\'' + escapeHtml(order.id) + '\')">??? LINE</button>',
+          '</div>',
+          '</article>',
         ].join('');
       }).join(''),
       '</div></section>',
@@ -655,9 +663,9 @@ function renderAvailableMenus() {
 
   document.getElementById('selectedIngredientChips').innerHTML = selectedIngredients.length
     ? selectedIngredients.map(function(item) { return '<span class="chip">' + escapeHtml(item.name) + '</span>'; }).join('')
-    : '<span class="chip warn">ยังไม่ได้เลือกวัตถุดิบ</span>';
+    : '<span class="chip warn">??????????????????????</span>';
 
-  document.getElementById('availableMenuCount').textContent = availableMenus.length + ' เมนู';
+  document.getElementById('availableMenuCount').textContent = availableMenus.length + ' ????';
   document.getElementById('availableMenuList').innerHTML = availableMenus.length
     ? availableMenus.map(function(recipe) {
       const coreCount = recipe.items.filter(function(item) {
@@ -667,11 +675,15 @@ function renderAvailableMenus() {
       return [
         '<div class="menu-list-item">',
         '<h4>' + escapeHtml(recipe.name) + '</h4>',
-        '<div class="meta-row"><span>' + escapeHtml(recipe.category || 'ไม่ระบุประเภท') + '</span><span>วัตถุดิบหลัก ' + coreCount + ' รายการ</span></div>',
+        '<div class="meta-row"><span>' + escapeHtml(recipe.category || '?????????????') + '</span><span>???????????? ' + coreCount + ' ??????</span></div>',
+        '<div class="actions">',
+        '<button class="secondary" type="button" onclick="openRecipeDetail(\'' + recipe.id + '\')">??????</button>',
+        '<button class="primary" type="button" onclick="addAvailableMenuToCart(\'' + recipe.id + '\')">?????????????</button>',
+        '</div>',
         '</div>',
       ].join('');
     }).join('')
-    : '<div class="empty-state">ยังไม่มีเมนูที่ตรงกับวัตถุดิบที่เลือก</div>';
+    : '<div class="empty-state">?????????????????????????????????????</div>';
 
   const shareText = buildLineShareText(selectedIngredients, availableMenus, selectedIds.length);
   document.getElementById('lineShareText').value = shareText;
@@ -952,6 +964,13 @@ function handleDetailAddToCart(recipeId) {
   renderAll();
 }
 
+function addAvailableMenuToCart(recipeId) {
+  const recipe = state.data.recipes.find(function(item) { return item.id === recipeId; });
+  if (!recipe) return;
+  addRecipeToOrder(recipe);
+  renderAll();
+}
+
 function addRecipeToOrder(recipe) {
   const existing = state.cart.find(function(item) { return item.id === recipe.id; });
   if (existing) {
@@ -1208,8 +1227,43 @@ function createPlaceholderImage() {
   return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=1200&q=80';
 }
 
+function buildDailyOrderLineText(order) {
+  return ['???????????', '', order.items.map(function(item) {
+    return '- ' + item.name + ' x ' + item.qty + ' ???';
+  }).join('\n')].join('\n');
+}
+
+function openDailyOrderDetail(orderId) {
+  const order = state.orderHistory.find(function(item) { return item.id === orderId; });
+  if (!order) return;
+
+  document.getElementById('dailyOrderDetailTitle').textContent = '??????????? ' + order.timeLabel;
+  document.getElementById('dailyOrderDetailBody').innerHTML = [
+    '<div class="detail-grid">',
+    '<div class="detail-section"><h4>??????</h4><p class="detail-note">' + escapeHtml(formatDateLabel(order.dateKey)) + '</p></div>',
+    '<div class="detail-section"><h4>???????????</h4><div class="chips">' + order.items.map(function(item) {
+      return '<span class="chip">' + escapeHtml(item.name + ' x ' + item.qty) + '</span>';
+    }).join('') + '</div></div>',
+    '<div class="detail-section"><h4>?????????? LINE</h4><div class="detail-longtext">' + formatLongText(buildDailyOrderLineText(order)) + '</div></div>',
+    '<div class="actions"><button class="primary" type="button" onclick="shareDailyOrderToLine(\'' + order.id + '\')">??????? LINE</button></div>',
+    '</div>',
+  ].join('');
+  document.getElementById('dailyOrderDetailDialog').showModal();
+}
+
+function shareDailyOrderToLine(orderId) {
+  const order = state.orderHistory.find(function(item) { return item.id === orderId; });
+  if (!order) return;
+  const text = buildDailyOrderLineText(order);
+  const url = 'https://line.me/R/msg/text/?' + encodeURIComponent(text);
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
 window.openRecipeDialog = openRecipeDialog;
 window.handleDetailAddToCart = handleDetailAddToCart;
+window.addAvailableMenuToCart = addAvailableMenuToCart;
+window.openDailyOrderDetail = openDailyOrderDetail;
+window.shareDailyOrderToLine = shareDailyOrderToLine;
 window.changeOrderQty = changeOrderQty;
 window.removeCartItem = removeCartItem;
 window.removeHistoryOrder = removeHistoryOrder;
