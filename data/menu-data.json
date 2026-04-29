@@ -26,6 +26,9 @@
       "category": "ข้าวจานเดียว",
       "imageUrl": "https://images.unsplash.com/photo-1512058564366-c9e3f7f14d5b?auto=format&fit=crop&w=900&q=70",
       "notes": "เมนูคลาสสิก ทำง่าย กินได้ทุกวัน",
+      "ingredientsText": "- ข้าวสวย 1 ถ้วย\n- หมูสับ 200 กรัม\n- ไข่ไก่ 1 ฟอง\n- กระเทียมสับ 1 ช้อนโต๊ะ\n- ซีอิ๊ว 1 ช้อนชา",
+      "methodText": "1. ตั้งกระทะใส่น้ำมันเล็กน้อยแล้วผัดกระเทียมให้หอม\n2. ใส่หมูสับลงผัดจนสุก\n3. ตอกไข่ลงไปยีให้แตก\n4. ใส่ข้าวสวยแล้วผัดให้เข้ากัน\n5. ปรุงรสด้วยซีอิ๊ว ชิมแล้วตักเสิร์ฟ",
+      "youtubeUrl": "https://www.youtube.com/watch?v=0Yp8A2nQm2A",
       "items": [
         { "ingredientId": "ING002", "requiredQty": 1 },
         { "ingredientId": "ING003", "requiredQty": 0.2 },
@@ -40,6 +43,9 @@
       "category": "กับข้าว",
       "imageUrl": "https://images.unsplash.com/photo-1510693206972-df098062cb71?auto=format&fit=crop&w=900&q=70",
       "notes": "กินกับข้าวสวยร้อนๆ อร่อยมาก",
+      "ingredientsText": "- ไข่ไก่ 2 ฟอง\n- หมูสับ 100 กรัม\n- น้ำปลา 1 ช้อนชา\n- น้ำมันพืชสำหรับทอด",
+      "methodText": "1. ตีไข่กับหมูสับและน้ำปลาให้เข้ากัน\n2. ตั้งน้ำมันให้ร้อน\n3. เทไข่ลงทอดจนฟูและเหลืองทั้งสองด้าน\n4. ตักขึ้นพักน้ำมันแล้วเสิร์ฟ",
+      "youtubeUrl": "https://www.youtube.com/watch?v=iQYwQQ8eI4M",
       "items": [
         { "ingredientId": "ING001", "requiredQty": 2 },
         { "ingredientId": "ING003", "requiredQty": 0.1 },
@@ -53,6 +59,9 @@
       "category": "อาหารจานเดียว",
       "imageUrl": "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=70",
       "notes": "เผ็ด หอมกะเพรา ทำไวมาก",
+      "ingredientsText": "- หมูสับ 200 กรัม\n- ใบกะเพรา 1 กำ\n- พริก 4 เม็ด\n- กระเทียม 1 ช้อนโต๊ะ\n- ซอสหอยนางรม 1 ช้อนโต๊ะ",
+      "methodText": "1. โขลกพริกกับกระเทียมหยาบๆ\n2. ผัดพริกกระเทียมกับน้ำมันจนหอม\n3. ใส่หมูสับลงผัดให้สุก\n4. ปรุงด้วยซอสหอยนางรม\n5. ใส่ใบกะเพราลงคลุกเร็วๆ แล้วปิดไฟ",
+      "youtubeUrl": "https://www.youtube.com/watch?v=ehxUQ9bQ2nQ",
       "items": [
         { "ingredientId": "ING003", "requiredQty": 0.2 },
         { "ingredientId": "ING008", "requiredQty": 0.5 },
@@ -66,7 +75,10 @@
       "name": "ผัดกะเพราไก่",
       "category": "อาหารจานเดียว",
       "imageUrl": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=70",
-      "notes": "ทางเลือกโปรตีนเบากว่าแต่ยังเข้มข้น",
+      "notes": "โปรตีนเบาแต่รสเข้มเหมือนเดิม",
+      "ingredientsText": "- อกไก่ 200 กรัม\n- ใบกะเพรา 1 กำ\n- พริก 4 เม็ด\n- กระเทียม 1 ช้อนโต๊ะ\n- ซอสหอยนางรม 1 ช้อนโต๊ะ",
+      "methodText": "1. สับไก่เป็นชิ้นเล็กหรือใช้ไก่สับ\n2. ผัดพริกกระเทียมกับน้ำมันให้หอม\n3. ใส่ไก่ลงผัดจนสุก\n4. ปรุงรสและคลุกใบกะเพราในตอนท้าย\n5. เสิร์ฟคู่ข้าวสวยหรือไข่ดาว",
+      "youtubeUrl": "https://www.youtube.com/watch?v=Ly0vQ6FKZfQ",
       "items": [
         { "ingredientId": "ING009", "requiredQty": 0.2 },
         { "ingredientId": "ING008", "requiredQty": 0.5 },
@@ -81,6 +93,9 @@
       "category": "ผัก",
       "imageUrl": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=70",
       "notes": "ทำเร็ว กินคู่เมนูหลักได้ดี",
+      "ingredientsText": "- ผักบุ้ง 1 กำ\n- กระเทียม 1 ช้อนโต๊ะ\n- พริก 2 เม็ด\n- ซีอิ๊ว 1 ช้อนชา",
+      "methodText": "1. ล้างผักบุ้งแล้วหั่นท่อน\n2. ตั้งไฟแรง ใส่น้ำมันเล็กน้อย\n3. ผัดกระเทียมกับพริกให้หอม\n4. ใส่ผักบุ้งแล้วปรุงรสเร็วๆ\n5. ผัดพอสลดแล้วยกลงทันที",
+      "youtubeUrl": "https://www.youtube.com/watch?v=9S3P5vY8qgI",
       "items": [
         { "ingredientId": "ING011", "requiredQty": 1 },
         { "ingredientId": "ING004", "requiredQty": 0.25 },
@@ -94,6 +109,9 @@
       "category": "กับข้าว",
       "imageUrl": "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=70",
       "notes": "เค็มหอม กินกับข้าวสวยอร่อยมาก",
+      "ingredientsText": "- หมูกรอบ 200 กรัม\n- คะน้า 1 กำ\n- กระเทียม 1 ช้อนโต๊ะ\n- ซอสหอยนางรม 1 ช้อนโต๊ะ",
+      "methodText": "1. หั่นคะน้าแยกก้านกับใบ\n2. ผัดกระเทียมให้หอม แล้วใส่หมูกรอบ\n3. ใส่ก้านคะน้าก่อน จากนั้นใส่ใบ\n4. ปรุงรสด้วยซอสหอยนางรม\n5. ผัดเร็วๆ ให้ผักยังกรอบอยู่",
+      "youtubeUrl": "https://www.youtube.com/watch?v=I1E8fS0l4nQ",
       "items": [
         { "ingredientId": "ING016", "requiredQty": 0.2 },
         { "ingredientId": "ING017", "requiredQty": 1 },
@@ -107,6 +125,9 @@
       "category": "มังสวิรัติ",
       "imageUrl": "https://images.unsplash.com/photo-1511690743698-d9d85f2fbf38?auto=format&fit=crop&w=900&q=70",
       "notes": "เรียบง่าย แต่อิ่มและสบายท้อง",
+      "ingredientsText": "- เต้าหู้ 1 ก้อน\n- กระเทียม 1 ช้อนโต๊ะ\n- ซีอิ๊ว 1 ช้อนชา\n- น้ำตาลเล็กน้อย",
+      "methodText": "1. หั่นเต้าหู้เป็นชิ้นพอดีคำ\n2. จี่เต้าหู้ให้ผิวเหลืองก่อน\n3. ผัดกระเทียมให้หอม\n4. ใส่เต้าหู้แล้วปรุงรสด้วยซีอิ๊วและน้ำตาล\n5. คลุกเบาๆ แล้วเสิร์ฟ",
+      "youtubeUrl": "https://www.youtube.com/watch?v=AF4S9D1VQwM",
       "items": [
         { "ingredientId": "ING010", "requiredQty": 1 },
         { "ingredientId": "ING004", "requiredQty": 0.25 },
@@ -120,6 +141,9 @@
       "category": "ข้าวจานเดียว",
       "imageUrl": "https://images.unsplash.com/photo-1604908554027-1f8f5f3af3f0?auto=format&fit=crop&w=900&q=70",
       "notes": "เมนูซีฟู้ดที่ดูพรีเมียมขึ้น",
+      "ingredientsText": "- ข้าวสวย 1 ถ้วย\n- กุ้ง 200 กรัม\n- ไข่ไก่ 1 ฟอง\n- กระเทียมสับ 1 ช้อนโต๊ะ\n- ซีอิ๊ว 1 ช้อนชา",
+      "methodText": "1. ผัดกระเทียมกับน้ำมันให้หอม\n2. ใส่กุ้งลงผัดพอสุก\n3. ตอกไข่ลงไปแล้วยีให้แตก\n4. ใส่ข้าวสวยและปรุงรส\n5. ผัดจนแห้งหอมแล้วตักเสิร์ฟ",
+      "youtubeUrl": "https://www.youtube.com/watch?v=0T_0z4tQd6Q",
       "items": [
         { "ingredientId": "ING002", "requiredQty": 1 },
         { "ingredientId": "ING018", "requiredQty": 0.2 },

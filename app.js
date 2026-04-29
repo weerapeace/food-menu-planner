@@ -25,7 +25,7 @@ function bindTabs() {
 }
 
 function bindFilters() {
-  ['recipeSearch', 'recipeStatus', 'ingredientSearch', 'cartSearch', 'shareIngredientSearch'].forEach(function(id) {
+  ['recipeSearch', 'recipeStatus', 'ingredientSearch', 'shareIngredientSearch'].forEach(function(id) {
     const node = document.getElementById(id);
     if (!node) return;
     node.addEventListener('input', renderAll);
@@ -70,18 +70,6 @@ function bindRecipeDialogs() {
   });
 }
 
-async function copyTextFromNode(nodeId, button, defaultLabel, successLabel) {
-  try {
-    await navigator.clipboard.writeText(document.getElementById(nodeId).value);
-    button.textContent = successLabel;
-    setTimeout(function() {
-      button.textContent = defaultLabel;
-    }, 1500);
-  } catch (error) {
-    alert('คัดลอกไม่สำเร็จ ลองคัดลอกด้วยตัวเองจากกล่องข้อความ');
-  }
-}
-
 async function loadData() {
   try {
     const response = await fetch('./data/menu-data.json', { cache: 'force-cache' });
@@ -95,7 +83,10 @@ async function loadData() {
 
 function transformData(payload) {
   const ingredients = payload.ingredients || [];
-  const ingredientMap = Object.fromEntries(ingredients.map(function(item) { return [item.id, item]; }));
+  const ingredientMap = Object.fromEntries(ingredients.map(function(item) {
+    return [item.id, item];
+  }));
+
   const recipes = (payload.recipes || []).map(function(recipe) {
     const items = (recipe.items || []).map(function(item) {
       const ingredient = ingredientMap[item.ingredientId] || {};
@@ -103,30 +94,38 @@ function transformData(payload) {
       const requiredQty = Number(item.requiredQty || 0);
       const missingQty = Math.max(0, requiredQty - availableQty);
       const purchasePrice = Number(ingredient.purchasePrice || 0);
+
       return {
         ingredientId: item.ingredientId,
-        ingredientName: ingredient.name || 'Unknown',
+        ingredientName: ingredient.name || 'ไม่ทราบชื่อ',
         unit: ingredient.unit || '',
-        requiredQty,
-        availableQty,
-        missingQty,
+        requiredQty: requiredQty,
+        availableQty: availableQty,
+        missingQty: missingQty,
         missingCost: missingQty * purchasePrice,
-        purchasePrice,
+        purchasePrice: purchasePrice,
       };
     });
 
-    return Object.assign({}, recipe, {
-      items,
+    return {
+      id: recipe.id,
+      name: recipe.name,
+      category: recipe.category || '',
+      imageUrl: recipe.imageUrl || '',
+      notes: recipe.notes || '',
+      ingredientsText: recipe.ingredientsText || '',
+      methodText: recipe.methodText || '',
+      youtubeUrl: recipe.youtubeUrl || '',
+      items: items,
       canCook: items.every(function(item) { return item.missingQty === 0; }),
       estimatedMissingCost: items.reduce(function(sum, item) { return sum + item.missingCost; }, 0),
-    });
+    };
   });
 
-  return { ingredients, recipes };
-}
-
-function isCoreShareIngredient(ingredient) {
-  return CORE_SHARE_CATEGORIES.has(String(ingredient && ingredient.category || '').trim());
+  return {
+    ingredients: ingredients,
+    recipes: recipes,
+  };
 }
 
 function renderAll() {
@@ -148,7 +147,7 @@ function renderSummary() {
       value: state.data.recipes.filter(function(recipe) { return recipe.canCook; }).length + ' / ' + state.data.recipes.length,
     },
     {
-      label: 'ออเดอร์ทั้งหมด',
+      label: 'ยอดรายการสั่ง',
       value: String(state.cart.reduce(function(sum, item) { return sum + item.qty; }, 0)),
     },
     {
@@ -169,13 +168,20 @@ function renderRecipes() {
   const template = document.getElementById('recipeCardTemplate');
 
   const recipes = state.data.recipes.filter(function(recipe) {
-    const haystack = normalizeText([recipe.name, recipe.category, recipe.notes].join(' '));
+    const haystack = normalizeText([
+      recipe.name,
+      recipe.category,
+      recipe.notes,
+      recipe.ingredientsText,
+      recipe.methodText,
+    ].join(' '));
     const matchesText = !search || haystack.includes(search);
     const matchesStatus = status === 'cookable'
       ? recipe.canCook
       : status === 'need-buy'
         ? !recipe.canCook
         : true;
+
     return matchesText && matchesStatus;
   });
 
@@ -193,9 +199,6 @@ function renderRecipes() {
     const chips = fragment.querySelector('.ingredients-used');
     const notes = fragment.querySelector('.notes');
     const badge = fragment.querySelector('.price-badge');
-    const addButton = fragment.querySelector('.add-cart-btn');
-    const detailButton = fragment.querySelector('.detail-btn');
-    const editButton = fragment.querySelector('.edit-btn');
 
     image.src = recipe.imageUrl || createPlaceholderImage();
     image.alt = recipe.name;
@@ -205,21 +208,21 @@ function renderRecipes() {
     badge.textContent = recipe.canCook ? 'ทำได้เลย' : 'ต้องซื้อเพิ่ม ' + formatCurrency(recipe.estimatedMissingCost);
 
     chips.innerHTML = recipe.items.map(function(item) {
-      return '<span class="chip">' + escapeHtml(item.ingredientName + ' • ' + item.requiredQty + ' ' + item.unit) + '</span>';
+      return '<span class="chip">' + escapeHtml(item.ingredientName + ' x ' + item.requiredQty + ' ' + item.unit) + '</span>';
     }).join('');
 
-    addButton.addEventListener('click', function() {
-      addRecipeToOrder(recipe);
-      setTab('cart');
-      renderAll();
-    });
-
-    detailButton.addEventListener('click', function() {
+    fragment.querySelector('.detail-btn').addEventListener('click', function() {
       openRecipeDetail(recipe.id);
     });
 
-    editButton.addEventListener('click', function() {
+    fragment.querySelector('.edit-btn').addEventListener('click', function() {
       openRecipeDialog(recipe.id);
+    });
+
+    fragment.querySelector('.add-cart-btn').addEventListener('click', function() {
+      addRecipeToOrder(recipe);
+      setTab('cart');
+      renderAll();
     });
 
     container.appendChild(fragment);
@@ -243,7 +246,12 @@ function renderIngredients() {
     return !search || haystack.includes(search);
   });
 
-  list.innerHTML = ingredients.length ? ingredients.map(function(item) {
+  if (!ingredients.length) {
+    list.innerHTML = '<div class="empty-state">ไม่พบวัตถุดิบที่ค้นหา</div>';
+    return;
+  }
+
+  list.innerHTML = ingredients.map(function(item) {
     const uses = recipeUsage[item.id] || [];
     return `
       <article class="card simple-item">
@@ -253,37 +261,43 @@ function renderIngredients() {
           <span>${escapeHtml(item.unit || 'หน่วย')}</span>
         </div>
         <div class="chips">
-          ${uses.length ? uses.map(function(name) { return '<span class="chip">' + escapeHtml(name) + '</span>'; }).join('') : '<span class="chip warn">ยังไม่ถูกใช้ในเมนู</span>'}
+          ${uses.length ? uses.map(function(name) {
+            return '<span class="chip">' + escapeHtml(name) + '</span>';
+          }).join('') : '<span class="chip warn">ยังไม่ถูกใช้ในเมนู</span>'}
         </div>
       </article>
     `;
-  }).join('') : '<div class="empty-state">ไม่พบวัตถุดิบที่ค้นหา</div>';
+  }).join('');
 }
 
 function renderCart() {
-  const html = state.cart.map(function(item, index) {
-    return `
-      <div class="cart-item">
-        <strong>${escapeHtml(item.name)}</strong>
-        <div class="meta-row">
-          <span>${escapeHtml(String(item.qty))} จาน</span>
-          <span>${item.canCook ? 'พร้อมทำ' : 'ต้องซื้อเพิ่ม ' + formatCurrency(item.estimatedMissingCost)}</span>
-        </div>
-        <div class="chips">
-          ${item.items.map(function(ingredient) {
-            return '<span class="chip">' + escapeHtml(ingredient.ingredientName) + '</span>';
-          }).join('')}
-        </div>
-        <div class="actions">
-          <button class="secondary" type="button" onclick="changeOrderQty(${index}, 1)">+1</button>
-          <button class="secondary" type="button" onclick="changeOrderQty(${index}, -1)">-1</button>
-          <button class="ghost" type="button" onclick="removeCartItem(${index})">ลบ</button>
-        </div>
-      </div>
-    `;
-  }).join('');
+  const cartList = document.getElementById('cartList');
 
-  document.getElementById('cartList').innerHTML = html || '<div class="empty-state">ยังไม่มีเมนูในตะกร้าออเดอร์</div>';
+  if (!state.cart.length) {
+    cartList.innerHTML = '<div class="empty-state">ยังไม่มีเมนูในตะกร้าออเดอร์</div>';
+  } else {
+    cartList.innerHTML = state.cart.map(function(item, index) {
+      return `
+        <div class="cart-item">
+          <strong>${escapeHtml(item.name)}</strong>
+          <div class="meta-row">
+            <span>${escapeHtml(String(item.qty))} จาน</span>
+            <span>${item.canCook ? 'พร้อมทำ' : 'ต้องซื้อเพิ่ม ' + formatCurrency(item.estimatedMissingCost)}</span>
+          </div>
+          <div class="chips">
+            ${item.items.map(function(ingredient) {
+              return '<span class="chip">' + escapeHtml(ingredient.ingredientName) + '</span>';
+            }).join('')}
+          </div>
+          <div class="actions">
+            <button class="secondary" type="button" onclick="changeOrderQty(${index}, 1)">+1</button>
+            <button class="secondary" type="button" onclick="changeOrderQty(${index}, -1)">-1</button>
+            <button class="ghost" type="button" onclick="removeCartItem(${index})">ลบ</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
 
   const orderText = buildOrderLineText();
   document.getElementById('orderLineText').value = orderText;
@@ -300,7 +314,13 @@ function renderIngredientChecklist() {
     return !search || normalizeText([item.name, item.category].join(' ')).includes(search);
   });
 
-  const html = ingredients.map(function(item) {
+  const container = document.getElementById('ingredientChecklist');
+  if (!ingredients.length) {
+    container.innerHTML = '<div class="empty-state">ไม่พบวัตถุดิบสำหรับเลือก</div>';
+    return;
+  }
+
+  container.innerHTML = ingredients.map(function(item) {
     const checked = state.selectedIngredients.has(item.id) ? 'checked' : '';
     return `
       <label class="ingredient-check">
@@ -310,15 +330,13 @@ function renderIngredientChecklist() {
     `;
   }).join('');
 
-  const container = document.getElementById('ingredientChecklist');
-  container.innerHTML = html || '<div class="empty-state">ไม่พบวัตถุดิบสำหรับเลือก</div>';
-
   container.querySelectorAll('[data-ingredient-check]').forEach(function(node) {
     node.addEventListener('change', function() {
+      const id = node.getAttribute('data-ingredient-check');
       if (node.checked) {
-        state.selectedIngredients.add(node.getAttribute('data-ingredient-check'));
+        state.selectedIngredients.add(id);
       } else {
-        state.selectedIngredients.delete(node.getAttribute('data-ingredient-check'));
+        state.selectedIngredients.delete(id);
       }
       renderAll();
     });
@@ -333,21 +351,27 @@ function renderAvailableMenus() {
   const availableMenus = getMenusFromSelectedIngredients();
 
   document.getElementById('selectedIngredientChips').innerHTML = selectedIngredients.length
-    ? selectedIngredients.map(function(item) { return '<span class="chip">' + escapeHtml(item.name) + '</span>'; }).join('')
+    ? selectedIngredients.map(function(item) {
+      return '<span class="chip">' + escapeHtml(item.name) + '</span>';
+    }).join('')
     : '<span class="chip warn">ยังไม่ได้เลือกวัตถุดิบ</span>';
 
   document.getElementById('availableMenuCount').textContent = availableMenus.length + ' เมนู';
   document.getElementById('availableMenuList').innerHTML = availableMenus.length
     ? availableMenus.map(function(recipe) {
+      const coreItemCount = recipe.items.filter(function(item) {
+        const ingredient = state.data.ingredients.find(function(entry) {
+          return entry.id === item.ingredientId;
+        });
+        return isCoreShareIngredient(ingredient);
+      }).length;
+
       return `
         <div class="menu-list-item">
           <h4>${escapeHtml(recipe.name)}</h4>
           <div class="meta-row">
             <span>${escapeHtml(recipe.category || 'ไม่ระบุประเภท')}</span>
-            <span>ใช้วัตถุดิบหลัก ${recipe.items.filter(function(item) {
-              const ingredient = state.data.ingredients.find(function(entry) { return entry.id === item.ingredientId; });
-              return isCoreShareIngredient(ingredient);
-            }).length} รายการ</span>
+            <span>ใช้วัตถุดิบหลัก ${coreItemCount} รายการ</span>
           </div>
         </div>
       `;
@@ -359,118 +383,19 @@ function renderAvailableMenus() {
   document.getElementById('lineShareLink').href = 'https://line.me/R/msg/text/?' + encodeURIComponent(shareText);
 }
 
-function getMenusFromSelectedIngredients() {
-  return state.data.recipes.filter(function(recipe) {
-    const coreItems = recipe.items.filter(function(item) {
-      const ingredient = state.data.ingredients.find(function(entry) {
-        return entry.id === item.ingredientId;
-      });
-      return isCoreShareIngredient(ingredient);
-    });
-
-    if (!coreItems.length) {
-      return false;
-    }
-
-    return coreItems.every(function(item) {
-      return state.selectedIngredients.has(item.ingredientId);
-    });
-  });
-}
-
-function buildLineShareText(selectedIngredients, availableMenus, totalSelected) {
-  const ingredientLines = selectedIngredients.length
-    ? selectedIngredients.map(function(item) { return '- ' + item.name; }).join('\n')
-    : '- ยังไม่ได้เลือกวัตถุดิบ';
-
-  const menuLines = availableMenus.length
-    ? availableMenus.map(function(recipe) { return '- ' + recipe.name; }).join('\n')
-    : '- ยังไม่มีเมนูที่ทำได้จากวัตถุดิบที่เลือก';
-
-  return [
-    'สรุปวัตถุดิบที่มีตอนนี้',
-    'เลือกไว้ ' + totalSelected + ' รายการ',
-    '',
-    ingredientLines,
-    '',
-    'เมนูที่ทำได้',
-    menuLines
-  ].join('\n');
-}
-
-function buildOrderLineText() {
-  if (!state.cart.length) {
-    return 'ยังไม่มีออเดอร์';
-  }
-
-  const lines = state.cart.map(function(item) {
-    return '- ' + item.name + ' x ' + item.qty + ' จาน';
-  }).join('\n');
-
-  return [
-    'สรุปออเดอร์',
-    '',
-    lines
-  ].join('\n');
-}
-
-function setTab(tab) {
-  state.activeTab = tab;
-  updateTabUI();
-}
-
-function updateTabUI() {
-  document.querySelectorAll('.tab').forEach(function(button) {
-    button.classList.toggle('is-active', button.dataset.tab === state.activeTab);
-  });
-  document.querySelectorAll('[data-panel]').forEach(function(panel) {
-    panel.classList.toggle('is-hidden', panel.dataset.panel !== state.activeTab);
-  });
-}
-
-function addRecipeToOrder(recipe) {
-  const existing = state.cart.find(function(item) {
-    return item.id === recipe.id;
-  });
-  if (existing) {
-    existing.qty += 1;
-    return;
-  }
-  state.cart.push({
-    id: recipe.id,
-    name: recipe.name,
-    qty: 1,
-    items: recipe.items,
-    canCook: recipe.canCook,
-    estimatedMissingCost: recipe.estimatedMissingCost,
-  });
-}
-
-function changeOrderQty(index, delta) {
-  const item = state.cart[index];
-  if (!item) return;
-  item.qty += delta;
-  if (item.qty <= 0) {
-    state.cart.splice(index, 1);
-  }
-  renderAll();
-}
-
-function removeCartItem(index) {
-  state.cart.splice(index, 1);
-  renderAll();
-}
-
 function openRecipeDialog(recipeId) {
   state.editingRecipeId = recipeId || null;
-  const dialog = document.getElementById('recipeDialog');
   const recipe = recipeId ? state.data.recipes.find(function(item) { return item.id === recipeId; }) : null;
+  const dialog = document.getElementById('recipeDialog');
 
   document.getElementById('recipeDialogTitle').textContent = recipe ? 'แก้ไขเมนู' : 'เพิ่มเมนู';
   document.getElementById('recipeNameInput').value = recipe ? recipe.name : '';
   document.getElementById('recipeCategoryInput').value = recipe ? recipe.category : '';
   document.getElementById('recipeImageInput').value = recipe ? recipe.imageUrl : '';
   document.getElementById('recipeNotesInput').value = recipe ? recipe.notes : '';
+  document.getElementById('recipeIngredientsTextInput').value = recipe ? recipe.ingredientsText : '';
+  document.getElementById('recipeMethodTextInput').value = recipe ? recipe.methodText : '';
+  document.getElementById('recipeYoutubeInput').value = recipe ? recipe.youtubeUrl : '';
 
   renderRecipeIngredientEditor(recipe);
   dialog.showModal();
@@ -510,11 +435,15 @@ function saveRecipeFromDialog() {
   }
 
   const items = state.data.ingredients.map(function(ingredient) {
-    const checked = document.querySelector('[data-editor-ingredient="' + ingredient.id + '"]').checked;
-    const qty = Number(document.querySelector('[data-editor-qty="' + ingredient.id + '"]').value || 0);
+    const checkedNode = document.querySelector('[data-editor-ingredient="' + ingredient.id + '"]');
+    const qtyNode = document.querySelector('[data-editor-qty="' + ingredient.id + '"]');
+    const checked = checkedNode && checkedNode.checked;
+    const qty = Number(qtyNode && qtyNode.value || 0);
+
     if (!checked || qty <= 0) {
       return null;
     }
+
     return {
       ingredientId: ingredient.id,
       requiredQty: qty,
@@ -526,50 +455,52 @@ function saveRecipeFromDialog() {
     return;
   }
 
-  const recipeId = state.editingRecipeId || 'REC' + Date.now();
   const recipeRecord = {
-    id: recipeId,
+    id: state.editingRecipeId || 'REC' + Date.now(),
     name: name,
     category: document.getElementById('recipeCategoryInput').value.trim(),
     imageUrl: document.getElementById('recipeImageInput').value.trim(),
     notes: document.getElementById('recipeNotesInput').value.trim(),
+    ingredientsText: document.getElementById('recipeIngredientsTextInput').value.trim(),
+    methodText: document.getElementById('recipeMethodTextInput').value.trim(),
+    youtubeUrl: document.getElementById('recipeYoutubeInput').value.trim(),
     items: items,
   };
 
-  const existingIndex = state.data.recipes.findIndex(function(item) {
-    return item.id === recipeId;
+  const rawRecipes = state.data.recipes.map(function(recipe) {
+    return {
+      id: recipe.id,
+      name: recipe.name,
+      category: recipe.category,
+      imageUrl: recipe.imageUrl,
+      notes: recipe.notes,
+      ingredientsText: recipe.ingredientsText,
+      methodText: recipe.methodText,
+      youtubeUrl: recipe.youtubeUrl,
+      items: recipe.items.map(function(item) {
+        return {
+          ingredientId: item.ingredientId,
+          requiredQty: item.requiredQty,
+        };
+      }),
+    };
   });
 
-  const transformed = transformData({
+  const existingIndex = rawRecipes.findIndex(function(recipe) {
+    return recipe.id === recipeRecord.id;
+  });
+
+  if (existingIndex >= 0) {
+    rawRecipes[existingIndex] = recipeRecord;
+  } else {
+    rawRecipes.push(recipeRecord);
+  }
+
+  state.data = transformData({
     ingredients: state.data.ingredients,
-    recipes: existingIndex >= 0
-      ? state.data.recipes.map(function(recipe) {
-          return recipe.id === recipeId ? recipeRecord : {
-            id: recipe.id,
-            name: recipe.name,
-            category: recipe.category,
-            imageUrl: recipe.imageUrl,
-            notes: recipe.notes,
-            items: recipe.items.map(function(item) {
-              return { ingredientId: item.ingredientId, requiredQty: item.requiredQty };
-            }),
-          };
-        })
-      : state.data.recipes.map(function(recipe) {
-          return {
-            id: recipe.id,
-            name: recipe.name,
-            category: recipe.category,
-            imageUrl: recipe.imageUrl,
-            notes: recipe.notes,
-            items: recipe.items.map(function(item) {
-              return { ingredientId: item.ingredientId, requiredQty: item.requiredQty };
-            }),
-          };
-        }).concat(recipeRecord),
+    recipes: rawRecipes,
   });
 
-  state.data = transformed;
   closeRecipeDialog();
   renderAll();
 }
@@ -578,8 +509,10 @@ function openRecipeDetail(recipeId) {
   const recipe = state.data.recipes.find(function(item) { return item.id === recipeId; });
   if (!recipe) return;
 
-  document.getElementById('recipeDetailTitle').textContent = recipe.name;
-  document.getElementById('recipeDetailBody').innerHTML = `
+  const youtubeEmbedUrl = toYoutubeEmbedUrl(recipe.youtubeUrl);
+  const detailBody = document.getElementById('recipeDetailBody');
+
+  detailBody.innerHTML = `
     <div class="detail-grid">
       <img class="detail-image" src="${escapeHtml(recipe.imageUrl || createPlaceholderImage())}" alt="${escapeHtml(recipe.name)}" loading="lazy" decoding="async">
       <div class="meta-row">
@@ -587,18 +520,26 @@ function openRecipeDetail(recipeId) {
         <span class="price">${recipe.canCook ? 'ทำได้เลย' : 'ต้องซื้อเพิ่ม ' + formatCurrency(recipe.estimatedMissingCost)}</span>
       </div>
       ${recipe.notes ? '<p class="detail-note">' + escapeHtml(recipe.notes) + '</p>' : ''}
-      <h4>วัตถุดิบที่ใช้</h4>
-      <div class="menu-list">
-        ${recipe.items.map(function(item) {
-          return '<div class="detail-ingredient"><strong>' + escapeHtml(item.ingredientName) + '</strong><span class="detail-note">ใช้ ' + escapeHtml(String(item.requiredQty)) + ' ' + escapeHtml(item.unit) + '</span></div>';
-        }).join('')}
+      <div class="detail-section">
+        <h4>วัตถุดิบที่ใช้</h4>
+        <div class="menu-list">
+          ${recipe.items.map(function(item) {
+            return '<div class="detail-ingredient"><strong>' + escapeHtml(item.ingredientName) + '</strong><span class="detail-note">ใช้ ' + escapeHtml(String(item.requiredQty)) + ' ' + escapeHtml(item.unit) + '</span></div>';
+          }).join('')}
+        </div>
       </div>
+      ${recipe.ingredientsText ? '<div class="detail-section"><h4>วัตถุดิบ</h4><div class="detail-longtext">' + formatLongText(recipe.ingredientsText) + '</div></div>' : ''}
+      ${recipe.methodText ? '<div class="detail-section"><h4>วิธีทำ</h4><div class="detail-longtext">' + formatLongText(recipe.methodText) + '</div></div>' : ''}
+      ${youtubeEmbedUrl ? '<div class="detail-section"><h4>วิดีโอ YouTube</h4><div class="video-embed"><iframe src="' + escapeHtml(youtubeEmbedUrl) + '" title="' + escapeHtml('วิดีโอ ' + recipe.name) + '" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div></div>' : ''}
+      ${recipe.youtubeUrl ? '<a class="ghost inline-link" href="' + escapeHtml(recipe.youtubeUrl) + '" target="_blank" rel="noopener noreferrer">เปิดดูบน YouTube</a>' : ''}
       <div class="actions">
         <button class="secondary" type="button" onclick="openRecipeDialog('${recipe.id}')">แก้ไขเมนูนี้</button>
         <button class="primary" type="button" onclick="handleDetailAddToCart('${recipe.id}')">เพิ่มในตะกร้า</button>
       </div>
     </div>
   `;
+
+  document.getElementById('recipeDetailTitle').textContent = recipe.name;
   document.getElementById('recipeDetailDialog').showModal();
 }
 
@@ -609,6 +550,127 @@ function handleDetailAddToCart(recipeId) {
   document.getElementById('recipeDetailDialog').close();
   setTab('cart');
   renderAll();
+}
+
+function addRecipeToOrder(recipe) {
+  const existing = state.cart.find(function(item) {
+    return item.id === recipe.id;
+  });
+
+  if (existing) {
+    existing.qty += 1;
+    return;
+  }
+
+  state.cart.push({
+    id: recipe.id,
+    name: recipe.name,
+    qty: 1,
+    items: recipe.items,
+    canCook: recipe.canCook,
+    estimatedMissingCost: recipe.estimatedMissingCost,
+  });
+}
+
+function changeOrderQty(index, delta) {
+  const item = state.cart[index];
+  if (!item) return;
+  item.qty += delta;
+  if (item.qty <= 0) {
+    state.cart.splice(index, 1);
+  }
+  renderAll();
+}
+
+function removeCartItem(index) {
+  state.cart.splice(index, 1);
+  renderAll();
+}
+
+function getMenusFromSelectedIngredients() {
+  return state.data.recipes.filter(function(recipe) {
+    const coreItems = recipe.items.filter(function(item) {
+      const ingredient = state.data.ingredients.find(function(entry) {
+        return entry.id === item.ingredientId;
+      });
+      return isCoreShareIngredient(ingredient);
+    });
+
+    if (!coreItems.length) {
+      return false;
+    }
+
+    return coreItems.every(function(item) {
+      return state.selectedIngredients.has(item.ingredientId);
+    });
+  });
+}
+
+function isCoreShareIngredient(ingredient) {
+  return CORE_SHARE_CATEGORIES.has(String(ingredient && ingredient.category || '').trim());
+}
+
+function buildLineShareText(selectedIngredients, availableMenus, totalSelected) {
+  const ingredientLines = selectedIngredients.length
+    ? selectedIngredients.map(function(item) { return '- ' + item.name; }).join('\n')
+    : '- ยังไม่ได้เลือกวัตถุดิบ';
+
+  const menuLines = availableMenus.length
+    ? availableMenus.map(function(recipe) { return '- ' + recipe.name; }).join('\n')
+    : '- ยังไม่มีเมนูที่ทำได้จากวัตถุดิบที่เลือก';
+
+  return [
+    'สรุปวัตถุดิบที่มีตอนนี้',
+    'เลือกไว้ ' + totalSelected + ' รายการ',
+    '',
+    ingredientLines,
+    '',
+    'เมนูที่ทำได้',
+    menuLines,
+  ].join('\n');
+}
+
+function buildOrderLineText() {
+  if (!state.cart.length) {
+    return 'ยังไม่มีออเดอร์';
+  }
+
+  const lines = state.cart.map(function(item) {
+    return '- ' + item.name + ' x ' + item.qty + ' จาน';
+  }).join('\n');
+
+  return [
+    'สรุปออเดอร์',
+    '',
+    lines,
+  ].join('\n');
+}
+
+function setTab(tab) {
+  state.activeTab = tab;
+  updateTabUI();
+}
+
+function updateTabUI() {
+  document.querySelectorAll('.tab').forEach(function(button) {
+    button.classList.toggle('is-active', button.dataset.tab === state.activeTab);
+  });
+
+  document.querySelectorAll('[data-panel]').forEach(function(panel) {
+    panel.classList.toggle('is-hidden', panel.dataset.panel !== state.activeTab);
+  });
+}
+
+async function copyTextFromNode(nodeId, button, defaultLabel, successLabel) {
+  try {
+    await navigator.clipboard.writeText(document.getElementById(nodeId).value);
+    button.textContent = successLabel;
+    setTimeout(function() {
+      button.textContent = defaultLabel;
+    }, 1500);
+  } catch (error) {
+    alert('คัดลอกไม่สำเร็จ ลองคัดลอกด้วยตัวเองจากกล่องข้อความ');
+  }
 }
 
 function formatCurrency(value) {
@@ -630,6 +692,41 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+function formatLongText(value) {
+  return escapeHtml(value).replace(/\n/g, '<br>');
+}
+
+function toYoutubeEmbedUrl(url) {
+  const value = String(url || '').trim();
+  if (!value) return '';
+
+  try {
+    const parsed = new URL(value);
+    const host = parsed.hostname.replace(/^www\./, '');
+
+    if (host === 'youtu.be') {
+      const id = parsed.pathname.replace(/\//g, '');
+      return id ? 'https://www.youtube.com/embed/' + encodeURIComponent(id) : '';
+    }
+
+    if (host === 'youtube.com' || host === 'm.youtube.com') {
+      const videoId = parsed.searchParams.get('v');
+      if (videoId) {
+        return 'https://www.youtube.com/embed/' + encodeURIComponent(videoId);
+      }
+
+      const embedMatch = parsed.pathname.match(/^\/embed\/([^/]+)/);
+      if (embedMatch) {
+        return 'https://www.youtube.com/embed/' + encodeURIComponent(embedMatch[1]);
+      }
+    }
+  } catch (error) {
+    return '';
+  }
+
+  return '';
 }
 
 function createPlaceholderImage() {
