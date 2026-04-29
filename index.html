@@ -38,6 +38,9 @@
           </div>
           <div class="toolbar toolbar-split">
             <input id="recipeSearch" type="search" placeholder="ค้นหาเมนู หรือประเภทอาหาร">
+            <select id="recipeCategoryFilter">
+              <option value="all">ทุกหมวดหมู่</option>
+            </select>
             <select id="recipeStatus">
               <option value="all">ทุกสถานะ</option>
               <option value="cookable">ทำได้เลย</option>
@@ -112,7 +115,7 @@
           <div class="share-layout">
             <div class="share-picker">
               <div class="section-label">เลือกวัตถุดิบที่มีแล้ว</div>
-              <div id="shareIngredientRows" class="ingredient-editor-grid"></div>
+              <div id="shareIngredientRows" class="chips chips-large"></div>
             </div>
 
             <div class="share-results">
@@ -159,7 +162,7 @@
           </label>
           <label class="field">
             <span>ประเภทอาหาร</span>
-            <input id="recipeCategoryInput" type="text">
+            <input id="recipeCategoryInput" type="text" list="recipeCategorySuggestions" placeholder="เช่น ข้าวจานเดียว / กับข้าว">
           </label>
           <label class="field full">
             <span>ลิงก์รูปภาพ</span>
@@ -234,6 +237,23 @@
       </form>
     </dialog>
 
+    <dialog id="shareIngredientDialog">
+      <form method="dialog" id="shareIngredientForm">
+        <div class="dialog-head">
+          <h3>เลือกวัตถุดิบที่มี</h3>
+          <button type="button" class="icon-button" id="closeShareIngredientDialog">x</button>
+        </div>
+        <div class="toolbar">
+          <input id="shareIngredientModalSearch" type="search" placeholder="ค้นหาวัตถุดิบ">
+        </div>
+        <div id="shareIngredientChecklist" class="ingredient-check-grid"></div>
+        <div class="dialog-actions">
+          <button type="button" class="secondary" id="cancelShareIngredientDialog">ยกเลิก</button>
+          <button type="submit" class="primary">ยืนยัน</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="recipeDetailDialog">
       <div class="detail-shell">
         <div class="dialog-head">
@@ -245,6 +265,7 @@
     </dialog>
 
     <datalist id="ingredientCategorySuggestions"></datalist>
+    <datalist id="recipeCategorySuggestions"></datalist>
 
     <template id="recipeCardTemplate">
       <article class="card recipe-card">

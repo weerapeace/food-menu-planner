@@ -177,7 +177,7 @@ p {
 }
 
 .toolbar-split {
-  grid-template-columns: minmax(0, 1fr) 220px;
+  grid-template-columns: minmax(0, 1fr) 220px 220px;
 }
 
 .toolbar-ingredients {
@@ -230,6 +230,7 @@ p {
   aspect-ratio: 16 / 10;
   overflow: hidden;
   background: linear-gradient(135deg, #f6e2cf, #f0c39d);
+  cursor: pointer;
 }
 
 .card-body,
@@ -280,6 +281,11 @@ p {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.chips-large {
+  min-height: 64px;
+  align-content: flex-start;
 }
 
 .chip {
@@ -366,6 +372,10 @@ p {
   border: 1px solid var(--line);
 }
 
+.ingredient-check {
+  grid-template-columns: auto 1fr;
+}
+
 .ingredient-check input,
 .ingredient-editor-item input {
   width: auto;
@@ -382,6 +392,12 @@ p {
 
 .ingredient-editor-item .ghost {
   padding-inline: 14px;
+}
+
+.ingredient-check-grid {
+  max-height: 52vh;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .daily-order-group,
