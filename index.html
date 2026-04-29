@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Food Menu Planner</title>
-    <meta name="description" content="เมนูอาหารพร้อมวัตถุดิบและรายการซื้อในหน้าเดียว">
+    <meta name="description" content="เมนูอาหารพร้อมตะกร้าออเดอร์และแชร์เข้า LINE">
     <link rel="preconnect" href="https://images.unsplash.com">
     <link rel="stylesheet" href="./styles.css">
   </head>
@@ -14,7 +14,7 @@
         <div class="hero-copy">
           <p class="eyebrow">Food Menu Planner</p>
           <h1>กินอะไรดีคะ?</h1>
-          <p class="hero-text">เวอร์ชันนี้เน้นใช้งานง่ายเหมือนเมนูร้านอาหาร โหลดเร็วบน Netlify และมีแท็บใหม่สำหรับติ๊กวัตถุดิบที่มี พร้อมสร้างลิงก์แชร์เข้า LINE ได้เลย</p>
+          <p class="hero-text">เลือกเมนูแบบร้านอาหาร ดูวัตถุดิบที่ใช้ เพิ่มลงตะกร้าออเดอร์ และสรุปข้อความเพื่อส่งเข้า LINE หลังสั่งได้ในหน้าเดียว</p>
         </div>
         <div class="hero-stats" id="summaryCards"></div>
       </header>
@@ -22,7 +22,7 @@
       <nav class="tabs">
         <button class="tab is-active" data-tab="recipes">เมนูอาหาร</button>
         <button class="tab" data-tab="ingredients">วัตถุดิบ</button>
-        <button class="tab" data-tab="cart">รายการซื้อ</button>
+        <button class="tab" data-tab="cart">ตะกร้าออเดอร์</button>
         <button class="tab" data-tab="share">เช็กวัตถุดิบ + แชร์ LINE</button>
       </nav>
 
@@ -33,6 +33,7 @@
               <span class="section-label">Main Menu</span>
               <h2>เมนูทั้งหมด</h2>
             </div>
+            <button class="primary" id="openAddRecipeBtn" type="button">เพิ่มเมนู</button>
           </div>
           <div class="toolbar toolbar-split">
             <input id="recipeSearch" type="search" placeholder="ค้นหาเมนู หรือประเภทอาหาร">
@@ -48,8 +49,8 @@
         <section class="panel is-hidden" data-panel="ingredients">
           <div class="panel-head">
             <div>
-              <span class="section-label">Kitchen Stock</span>
-              <h2>วัตถุดิบในครัว</h2>
+              <span class="section-label">Ingredients</span>
+              <h2>วัตถุดิบทั้งหมด</h2>
             </div>
           </div>
           <div class="toolbar">
@@ -61,14 +62,20 @@
         <section class="panel is-hidden" data-panel="cart">
           <div class="panel-head">
             <div>
-              <span class="section-label">Shopping List</span>
-              <h2>รายการซื้อ</h2>
+              <span class="section-label">Order Cart</span>
+              <h2>ตะกร้าออเดอร์</h2>
             </div>
-          </div>
-          <div class="toolbar">
-            <input id="cartSearch" type="search" placeholder="ค้นหารายการซื้อ">
+            <button class="secondary" id="clearOrderBtn" type="button">ล้างออเดอร์</button>
           </div>
           <div class="cart-list" id="cartList"></div>
+          <div class="order-share-box" id="orderShareBox">
+            <span class="section-label">ส่งเข้า LINE หลังสั่ง</span>
+            <textarea id="orderLineText" rows="7" readonly></textarea>
+            <div class="actions">
+              <button class="secondary" id="copyOrderTextBtn" type="button">คัดลอกข้อความ</button>
+              <a class="primary share-link" id="orderLineLink" href="#" target="_blank" rel="noopener noreferrer">ส่งเข้า LINE</a>
+            </div>
+          </div>
         </section>
 
         <section class="panel is-hidden" data-panel="share">
@@ -121,6 +128,51 @@
       </main>
     </div>
 
+    <dialog id="recipeDialog">
+      <form method="dialog" id="recipeForm">
+        <div class="dialog-head">
+          <h3 id="recipeDialogTitle">เพิ่มเมนู</h3>
+          <button type="button" class="icon-button" id="closeRecipeDialog">x</button>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span>ชื่อเมนู</span>
+            <input id="recipeNameInput" type="text" required>
+          </label>
+          <label class="field">
+            <span>ประเภทอาหาร</span>
+            <input id="recipeCategoryInput" type="text">
+          </label>
+          <label class="field full">
+            <span>ลิงก์รูปภาพ</span>
+            <input id="recipeImageInput" type="url" placeholder="https://...">
+          </label>
+          <label class="field full">
+            <span>คำอธิบาย</span>
+            <textarea id="recipeNotesInput" rows="3"></textarea>
+          </label>
+          <div class="field full">
+            <span>วัตถุดิบที่ใช้</span>
+            <div id="recipeIngredientEditor" class="ingredient-editor-grid"></div>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button type="button" class="secondary" id="cancelRecipeDialog">ยกเลิก</button>
+          <button type="submit" class="primary">บันทึกเมนู</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="recipeDetailDialog">
+      <div class="detail-shell">
+        <div class="dialog-head">
+          <h3 id="recipeDetailTitle">รายละเอียดเมนู</h3>
+          <button type="button" class="icon-button" id="closeRecipeDetailDialog">x</button>
+        </div>
+        <div id="recipeDetailBody"></div>
+      </div>
+    </dialog>
+
     <template id="recipeCardTemplate">
       <article class="card recipe-card">
         <div class="image-wrap">
@@ -132,10 +184,12 @@
             <span class="price-badge"></span>
           </div>
           <p class="category"></p>
-          <div class="chips"></div>
+          <div class="chips ingredients-used"></div>
           <p class="notes"></p>
           <div class="card-actions">
-            <button class="primary add-cart-btn" type="button">เพิ่มของที่ขาดลงรายการซื้อ</button>
+            <button class="secondary detail-btn" type="button">ดูเมนู</button>
+            <button class="ghost edit-btn" type="button">แก้ไข</button>
+            <button class="primary add-cart-btn" type="button">เพิ่มในตะกร้า</button>
           </div>
         </div>
       </article>

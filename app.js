@@ -3,6 +3,7 @@ const state = {
   activeTab: 'recipes',
   cart: [],
   selectedIngredients: new Set(),
+  editingRecipeId: null,
 };
 
 const CORE_SHARE_CATEGORIES = new Set(['โปรตีน', 'ผัก', 'ซีฟู้ด']);
@@ -11,6 +12,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   bindTabs();
   bindFilters();
   bindShareActions();
+  bindRecipeDialogs();
   await loadData();
 });
 
@@ -38,17 +40,46 @@ function bindShareActions() {
   });
 
   document.getElementById('copyLineTextBtn').addEventListener('click', async function() {
-    const text = document.getElementById('lineShareText').value;
-    try {
-      await navigator.clipboard.writeText(text);
-      this.textContent = 'คัดลอกแล้ว';
-      setTimeout(() => {
-        this.textContent = 'คัดลอกข้อความ';
-      }, 1500);
-    } catch (error) {
-      alert('คัดลอกไม่สำเร็จ ลองคัดลอกด้วยตัวเองจากกล่องข้อความ');
-    }
+    await copyTextFromNode('lineShareText', this, 'คัดลอกข้อความ', 'คัดลอกแล้ว');
   });
+
+  document.getElementById('copyOrderTextBtn').addEventListener('click', async function() {
+    await copyTextFromNode('orderLineText', this, 'คัดลอกข้อความ', 'คัดลอกแล้ว');
+  });
+
+  document.getElementById('clearOrderBtn').addEventListener('click', function() {
+    state.cart = [];
+    renderAll();
+  });
+}
+
+function bindRecipeDialogs() {
+  document.getElementById('openAddRecipeBtn').addEventListener('click', function() {
+    openRecipeDialog();
+  });
+
+  document.getElementById('closeRecipeDialog').addEventListener('click', closeRecipeDialog);
+  document.getElementById('cancelRecipeDialog').addEventListener('click', closeRecipeDialog);
+  document.getElementById('closeRecipeDetailDialog').addEventListener('click', function() {
+    document.getElementById('recipeDetailDialog').close();
+  });
+
+  document.getElementById('recipeForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+    saveRecipeFromDialog();
+  });
+}
+
+async function copyTextFromNode(nodeId, button, defaultLabel, successLabel) {
+  try {
+    await navigator.clipboard.writeText(document.getElementById(nodeId).value);
+    button.textContent = successLabel;
+    setTimeout(function() {
+      button.textContent = defaultLabel;
+    }, 1500);
+  } catch (error) {
+    alert('คัดลอกไม่สำเร็จ ลองคัดลอกด้วยตัวเองจากกล่องข้อความ');
+  }
 }
 
 async function loadData() {
@@ -117,8 +148,8 @@ function renderSummary() {
       value: state.data.recipes.filter(function(recipe) { return recipe.canCook; }).length + ' / ' + state.data.recipes.length,
     },
     {
-      label: 'ยอดรายการซื้อ',
-      value: formatCurrency(state.cart.reduce(function(sum, item) { return sum + item.totalCost; }, 0)),
+      label: 'ออเดอร์ทั้งหมด',
+      value: String(state.cart.reduce(function(sum, item) { return sum + item.qty; }, 0)),
     },
     {
       label: 'เมนูจากของที่มี',
@@ -159,10 +190,12 @@ function renderRecipes() {
     const image = fragment.querySelector('.card-image');
     const title = fragment.querySelector('h3');
     const category = fragment.querySelector('.category');
-    const chips = fragment.querySelector('.chips');
+    const chips = fragment.querySelector('.ingredients-used');
     const notes = fragment.querySelector('.notes');
     const badge = fragment.querySelector('.price-badge');
     const addButton = fragment.querySelector('.add-cart-btn');
+    const detailButton = fragment.querySelector('.detail-btn');
+    const editButton = fragment.querySelector('.edit-btn');
 
     image.src = recipe.imageUrl || createPlaceholderImage();
     image.alt = recipe.name;
@@ -172,15 +205,21 @@ function renderRecipes() {
     badge.textContent = recipe.canCook ? 'ทำได้เลย' : 'ต้องซื้อเพิ่ม ' + formatCurrency(recipe.estimatedMissingCost);
 
     chips.innerHTML = recipe.items.map(function(item) {
-      const label = item.missingQty === 0 ? 'พร้อม' : 'ขาด ' + item.missingQty + ' ' + item.unit;
-      const type = item.missingQty === 0 ? 'ok' : 'warn';
-      return '<span class="chip ' + type + '">' + escapeHtml(item.ingredientName + ' • ' + label) + '</span>';
+      return '<span class="chip">' + escapeHtml(item.ingredientName + ' • ' + item.requiredQty + ' ' + item.unit) + '</span>';
     }).join('');
 
     addButton.addEventListener('click', function() {
-      addMissingToCart(recipe);
+      addRecipeToOrder(recipe);
       setTab('cart');
       renderAll();
+    });
+
+    detailButton.addEventListener('click', function() {
+      openRecipeDetail(recipe.id);
+    });
+
+    editButton.addEventListener('click', function() {
+      openRecipeDialog(recipe.id);
     });
 
     container.appendChild(fragment);
@@ -211,10 +250,7 @@ function renderIngredients() {
         <h3>${escapeHtml(item.name)}</h3>
         <div class="meta-row">
           <span>${escapeHtml(item.category || 'ไม่ระบุหมวด')}</span>
-          <span>คงเหลือ ${escapeHtml(String(item.stockQty || 0))} ${escapeHtml(item.unit || '')}</span>
-        </div>
-        <div class="meta-row">
-          <span>ราคาซื้อ ${formatCurrency(item.purchasePrice || 0)} / ${escapeHtml(item.unit || 'หน่วย')}</span>
+          <span>${escapeHtml(item.unit || 'หน่วย')}</span>
         </div>
         <div class="chips">
           ${uses.length ? uses.map(function(name) { return '<span class="chip">' + escapeHtml(name) + '</span>'; }).join('') : '<span class="chip warn">ยังไม่ถูกใช้ในเมนู</span>'}
@@ -225,29 +261,34 @@ function renderIngredients() {
 }
 
 function renderCart() {
-  const search = normalizeText(document.getElementById('cartSearch').value);
-  const items = state.cart.filter(function(item) {
-    return !search || normalizeText([item.name, item.unit].join(' ')).includes(search);
-  });
-
-  const html = items.map(function(item, index) {
+  const html = state.cart.map(function(item, index) {
     return `
       <div class="cart-item">
         <strong>${escapeHtml(item.name)}</strong>
         <div class="meta-row">
-          <span>${escapeHtml(String(item.qty))} ${escapeHtml(item.unit)} x ${formatCurrency(item.unitPrice)}</span>
-          <span>${formatCurrency(item.totalCost)}</span>
+          <span>${escapeHtml(String(item.qty))} จาน</span>
+          <span>${item.canCook ? 'พร้อมทำ' : 'ต้องซื้อเพิ่ม ' + formatCurrency(item.estimatedMissingCost)}</span>
+        </div>
+        <div class="chips">
+          ${item.items.map(function(ingredient) {
+            return '<span class="chip">' + escapeHtml(ingredient.ingredientName) + '</span>';
+          }).join('')}
         </div>
         <div class="actions">
+          <button class="secondary" type="button" onclick="changeOrderQty(${index}, 1)">+1</button>
+          <button class="secondary" type="button" onclick="changeOrderQty(${index}, -1)">-1</button>
           <button class="ghost" type="button" onclick="removeCartItem(${index})">ลบ</button>
         </div>
       </div>
     `;
   }).join('');
 
-  document.getElementById('cartList').innerHTML = html
-    ? html + '<div class="cart-item"><strong>รวมทั้งหมด</strong><div class="meta-row"><span></span><span>' + formatCurrency(state.cart.reduce(function(sum, item) { return sum + item.totalCost; }, 0)) + '</span></div></div>'
-    : '<div class="empty-state">ยังไม่มีรายการซื้อ</div>';
+  document.getElementById('cartList').innerHTML = html || '<div class="empty-state">ยังไม่มีเมนูในตะกร้าออเดอร์</div>';
+
+  const orderText = buildOrderLineText();
+  document.getElementById('orderLineText').value = orderText;
+  document.getElementById('orderLineLink').href = 'https://line.me/R/msg/text/?' + encodeURIComponent(orderText);
+  document.getElementById('orderShareBox').classList.toggle('is-hidden', !state.cart.length);
 }
 
 function renderIngredientChecklist() {
@@ -303,7 +344,10 @@ function renderAvailableMenus() {
           <h4>${escapeHtml(recipe.name)}</h4>
           <div class="meta-row">
             <span>${escapeHtml(recipe.category || 'ไม่ระบุประเภท')}</span>
-            <span>${recipe.canCook ? 'ครบทั้งจำนวน' : 'มีวัตถุดิบครบตามรายการ'}</span>
+            <span>ใช้วัตถุดิบหลัก ${recipe.items.filter(function(item) {
+              const ingredient = state.data.ingredients.find(function(entry) { return entry.id === item.ingredientId; });
+              return isCoreShareIngredient(ingredient);
+            }).length} รายการ</span>
           </div>
         </div>
       `;
@@ -354,6 +398,22 @@ function buildLineShareText(selectedIngredients, availableMenus, totalSelected) 
   ].join('\n');
 }
 
+function buildOrderLineText() {
+  if (!state.cart.length) {
+    return 'ยังไม่มีออเดอร์';
+  }
+
+  const lines = state.cart.map(function(item) {
+    return '- ' + item.name + ' x ' + item.qty + ' จาน';
+  }).join('\n');
+
+  return [
+    'สรุปออเดอร์',
+    '',
+    lines
+  ].join('\n');
+}
+
 function setTab(tab) {
   state.activeTab = tab;
   updateTabUI();
@@ -368,30 +428,186 @@ function updateTabUI() {
   });
 }
 
-function addMissingToCart(recipe) {
-  recipe.items.forEach(function(item) {
-    if (!item.missingQty) return;
-    const existing = state.cart.find(function(cartItem) {
-      return cartItem.ingredientId === item.ingredientId;
-    });
-    if (existing) {
-      existing.qty += item.missingQty;
-      existing.totalCost = existing.qty * existing.unitPrice;
-      return;
-    }
-    state.cart.push({
-      ingredientId: item.ingredientId,
-      name: item.ingredientName,
-      qty: item.missingQty,
-      unit: item.unit,
-      unitPrice: item.purchasePrice,
-      totalCost: item.missingQty * item.purchasePrice,
-    });
+function addRecipeToOrder(recipe) {
+  const existing = state.cart.find(function(item) {
+    return item.id === recipe.id;
   });
+  if (existing) {
+    existing.qty += 1;
+    return;
+  }
+  state.cart.push({
+    id: recipe.id,
+    name: recipe.name,
+    qty: 1,
+    items: recipe.items,
+    canCook: recipe.canCook,
+    estimatedMissingCost: recipe.estimatedMissingCost,
+  });
+}
+
+function changeOrderQty(index, delta) {
+  const item = state.cart[index];
+  if (!item) return;
+  item.qty += delta;
+  if (item.qty <= 0) {
+    state.cart.splice(index, 1);
+  }
+  renderAll();
 }
 
 function removeCartItem(index) {
   state.cart.splice(index, 1);
+  renderAll();
+}
+
+function openRecipeDialog(recipeId) {
+  state.editingRecipeId = recipeId || null;
+  const dialog = document.getElementById('recipeDialog');
+  const recipe = recipeId ? state.data.recipes.find(function(item) { return item.id === recipeId; }) : null;
+
+  document.getElementById('recipeDialogTitle').textContent = recipe ? 'แก้ไขเมนู' : 'เพิ่มเมนู';
+  document.getElementById('recipeNameInput').value = recipe ? recipe.name : '';
+  document.getElementById('recipeCategoryInput').value = recipe ? recipe.category : '';
+  document.getElementById('recipeImageInput').value = recipe ? recipe.imageUrl : '';
+  document.getElementById('recipeNotesInput').value = recipe ? recipe.notes : '';
+
+  renderRecipeIngredientEditor(recipe);
+  dialog.showModal();
+}
+
+function renderRecipeIngredientEditor(recipe) {
+  const selectedItems = {};
+  (recipe && recipe.items || []).forEach(function(item) {
+    selectedItems[item.ingredientId] = item.requiredQty;
+  });
+
+  document.getElementById('recipeIngredientEditor').innerHTML = state.data.ingredients.map(function(ingredient) {
+    const checked = selectedItems[ingredient.id] ? 'checked' : '';
+    const qty = selectedItems[ingredient.id] || '';
+    return `
+      <div class="ingredient-editor-item">
+        <label>
+          <input type="checkbox" data-editor-ingredient="${escapeHtml(ingredient.id)}" ${checked}>
+          <span>${escapeHtml(ingredient.name)}</span>
+          <input type="number" min="0" step="0.01" value="${escapeHtml(String(qty))}" data-editor-qty="${escapeHtml(ingredient.id)}" placeholder="qty">
+        </label>
+      </div>
+    `;
+  }).join('');
+}
+
+function closeRecipeDialog() {
+  document.getElementById('recipeDialog').close();
+  state.editingRecipeId = null;
+}
+
+function saveRecipeFromDialog() {
+  const name = document.getElementById('recipeNameInput').value.trim();
+  if (!name) {
+    alert('กรุณาใส่ชื่อเมนู');
+    return;
+  }
+
+  const items = state.data.ingredients.map(function(ingredient) {
+    const checked = document.querySelector('[data-editor-ingredient="' + ingredient.id + '"]').checked;
+    const qty = Number(document.querySelector('[data-editor-qty="' + ingredient.id + '"]').value || 0);
+    if (!checked || qty <= 0) {
+      return null;
+    }
+    return {
+      ingredientId: ingredient.id,
+      requiredQty: qty,
+    };
+  }).filter(Boolean);
+
+  if (!items.length) {
+    alert('กรุณาเลือกวัตถุดิบอย่างน้อย 1 รายการ');
+    return;
+  }
+
+  const recipeId = state.editingRecipeId || 'REC' + Date.now();
+  const recipeRecord = {
+    id: recipeId,
+    name: name,
+    category: document.getElementById('recipeCategoryInput').value.trim(),
+    imageUrl: document.getElementById('recipeImageInput').value.trim(),
+    notes: document.getElementById('recipeNotesInput').value.trim(),
+    items: items,
+  };
+
+  const existingIndex = state.data.recipes.findIndex(function(item) {
+    return item.id === recipeId;
+  });
+
+  const transformed = transformData({
+    ingredients: state.data.ingredients,
+    recipes: existingIndex >= 0
+      ? state.data.recipes.map(function(recipe) {
+          return recipe.id === recipeId ? recipeRecord : {
+            id: recipe.id,
+            name: recipe.name,
+            category: recipe.category,
+            imageUrl: recipe.imageUrl,
+            notes: recipe.notes,
+            items: recipe.items.map(function(item) {
+              return { ingredientId: item.ingredientId, requiredQty: item.requiredQty };
+            }),
+          };
+        })
+      : state.data.recipes.map(function(recipe) {
+          return {
+            id: recipe.id,
+            name: recipe.name,
+            category: recipe.category,
+            imageUrl: recipe.imageUrl,
+            notes: recipe.notes,
+            items: recipe.items.map(function(item) {
+              return { ingredientId: item.ingredientId, requiredQty: item.requiredQty };
+            }),
+          };
+        }).concat(recipeRecord),
+  });
+
+  state.data = transformed;
+  closeRecipeDialog();
+  renderAll();
+}
+
+function openRecipeDetail(recipeId) {
+  const recipe = state.data.recipes.find(function(item) { return item.id === recipeId; });
+  if (!recipe) return;
+
+  document.getElementById('recipeDetailTitle').textContent = recipe.name;
+  document.getElementById('recipeDetailBody').innerHTML = `
+    <div class="detail-grid">
+      <img class="detail-image" src="${escapeHtml(recipe.imageUrl || createPlaceholderImage())}" alt="${escapeHtml(recipe.name)}" loading="lazy" decoding="async">
+      <div class="meta-row">
+        <span>${escapeHtml(recipe.category || 'ไม่ระบุประเภท')}</span>
+        <span class="price">${recipe.canCook ? 'ทำได้เลย' : 'ต้องซื้อเพิ่ม ' + formatCurrency(recipe.estimatedMissingCost)}</span>
+      </div>
+      ${recipe.notes ? '<p class="detail-note">' + escapeHtml(recipe.notes) + '</p>' : ''}
+      <h4>วัตถุดิบที่ใช้</h4>
+      <div class="menu-list">
+        ${recipe.items.map(function(item) {
+          return '<div class="detail-ingredient"><strong>' + escapeHtml(item.ingredientName) + '</strong><span class="detail-note">ใช้ ' + escapeHtml(String(item.requiredQty)) + ' ' + escapeHtml(item.unit) + '</span></div>';
+        }).join('')}
+      </div>
+      <div class="actions">
+        <button class="secondary" type="button" onclick="openRecipeDialog('${recipe.id}')">แก้ไขเมนูนี้</button>
+        <button class="primary" type="button" onclick="handleDetailAddToCart('${recipe.id}')">เพิ่มในตะกร้า</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('recipeDetailDialog').showModal();
+}
+
+function handleDetailAddToCart(recipeId) {
+  const recipe = state.data.recipes.find(function(item) { return item.id === recipeId; });
+  if (!recipe) return;
+  addRecipeToOrder(recipe);
+  document.getElementById('recipeDetailDialog').close();
+  setTab('cart');
   renderAll();
 }
 
