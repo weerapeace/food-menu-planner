@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Menu Planner</title>
+    <meta name="description" content="เมนูอาหารพร้อมวัตถุดิบและรายการซื้อในหน้าเดียว">
+    <link rel="preconnect" href="https://images.unsplash.com">
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Food Menu Planner</p>
+          <h1>เลือกเมนูอาหารก่อน แล้วให้ระบบช่วยคิดจากวัตถุดิบที่มี</h1>
+          <p class="hero-text">เวอร์ชันนี้เน้นใช้งานง่ายเหมือนเมนูร้านอาหาร โหลดเร็วบน Netlify และมีแท็บใหม่สำหรับติ๊กวัตถุดิบที่มี พร้อมสร้างลิงก์แชร์เข้า LINE ได้เลย</p>
+        </div>
+        <div class="hero-stats" id="summaryCards"></div>
+      </header>
+
+      <nav class="tabs">
+        <button class="tab is-active" data-tab="recipes">เมนูอาหาร</button>
+        <button class="tab" data-tab="ingredients">วัตถุดิบ</button>
+        <button class="tab" data-tab="cart">รายการซื้อ</button>
+        <button class="tab" data-tab="share">เช็กวัตถุดิบ + แชร์ LINE</button>
+      </nav>
+
+      <main class="content">
+        <section class="panel" data-panel="recipes">
+          <div class="panel-head">
+            <div>
+              <span class="section-label">Main Menu</span>
+              <h2>เมนูทั้งหมด</h2>
+            </div>
+          </div>
+          <div class="toolbar toolbar-split">
+            <input id="recipeSearch" type="search" placeholder="ค้นหาเมนู หรือประเภทอาหาร">
+            <select id="recipeStatus">
+              <option value="all">ทุกสถานะ</option>
+              <option value="cookable">ทำได้เลย</option>
+              <option value="need-buy">ต้องซื้อเพิ่ม</option>
+            </select>
+          </div>
+          <div class="recipe-grid" id="recipeList"></div>
+        </section>
+
+        <section class="panel is-hidden" data-panel="ingredients">
+          <div class="panel-head">
+            <div>
+              <span class="section-label">Kitchen Stock</span>
+              <h2>วัตถุดิบในครัว</h2>
+            </div>
+          </div>
+          <div class="toolbar">
+            <input id="ingredientSearch" type="search" placeholder="ค้นหาวัตถุดิบ หรือหมวดหมู่">
+          </div>
+          <div class="simple-grid" id="ingredientList"></div>
+        </section>
+
+        <section class="panel is-hidden" data-panel="cart">
+          <div class="panel-head">
+            <div>
+              <span class="section-label">Shopping List</span>
+              <h2>รายการซื้อ</h2>
+            </div>
+          </div>
+          <div class="toolbar">
+            <input id="cartSearch" type="search" placeholder="ค้นหารายการซื้อ">
+          </div>
+          <div class="cart-list" id="cartList"></div>
+        </section>
+
+        <section class="panel is-hidden" data-panel="share">
+          <div class="panel-head">
+            <div>
+              <span class="section-label">Share to LINE</span>
+              <h2>ติ๊กวัตถุดิบที่มี แล้วดูเมนูที่ทำได้</h2>
+            </div>
+          </div>
+
+          <div class="toolbar toolbar-split">
+            <input id="shareIngredientSearch" type="search" placeholder="ค้นหาวัตถุดิบที่จะติ๊ก">
+            <button class="secondary" type="button" id="clearSelectedIngredients">ล้างที่เลือก</button>
+          </div>
+
+          <div class="share-layout">
+            <div class="share-picker">
+              <div class="section-label">เลือกวัตถุดิบที่มีแล้ว</div>
+              <div class="ingredient-check-grid" id="ingredientChecklist"></div>
+            </div>
+
+            <div class="share-results">
+              <div class="result-card">
+                <span class="section-label">วัตถุดิบที่เลือก</span>
+                <div class="chips" id="selectedIngredientChips"></div>
+              </div>
+
+              <div class="result-card">
+                <div class="result-head">
+                  <div>
+                    <span class="section-label">เมนูที่ทำได้</span>
+                    <h3 id="availableMenuCount">0 เมนู</h3>
+                  </div>
+                  <button class="primary" type="button" id="copyLineTextBtn">คัดลอกข้อความ</button>
+                </div>
+                <div class="menu-list" id="availableMenuList"></div>
+              </div>
+
+              <div class="result-card">
+                <span class="section-label">แชร์เข้ากลุ่ม LINE</span>
+                <p class="share-note">ระบบจะสร้างข้อความสรุปรายการวัตถุดิบที่มี และเมนูที่ทำได้ เพื่อกดแชร์ต่อเข้าแชต LINE</p>
+                <textarea id="lineShareText" rows="8" readonly></textarea>
+                <div class="actions">
+                  <a class="primary share-link" id="lineShareLink" href="#" target="_blank" rel="noopener noreferrer">เปิดลิงก์แชร์ LINE</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <template id="recipeCardTemplate">
+      <article class="card recipe-card">
+        <div class="image-wrap">
+          <img class="card-image" alt="" loading="lazy" decoding="async">
+        </div>
+        <div class="card-body">
+          <div class="title-row">
+            <h3></h3>
+            <span class="price-badge"></span>
+          </div>
+          <p class="category"></p>
+          <div class="chips"></div>
+          <p class="notes"></p>
+          <div class="card-actions">
+            <button class="primary add-cart-btn" type="button">เพิ่มของที่ขาดลงรายการซื้อ</button>
+          </div>
+        </div>
+      </article>
+    </template>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>

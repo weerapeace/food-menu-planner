@@ -1,0 +1,132 @@
+{
+  "ingredients": [
+    { "id": "ING001", "name": "ไข่ไก่", "category": "โปรตีน", "stockQty": 6, "unit": "ฟอง", "purchasePrice": 5, "imageUrl": "", "notes": "มีติดครัวไว้เสมอ" },
+    { "id": "ING002", "name": "ข้าวสวย", "category": "คาร์บ", "stockQty": 2, "unit": "ถ้วย", "purchasePrice": 10, "imageUrl": "", "notes": "ข้าวหุงแล้ว" },
+    { "id": "ING003", "name": "หมูสับ", "category": "โปรตีน", "stockQty": 0.5, "unit": "กก.", "purchasePrice": 140, "imageUrl": "", "notes": "" },
+    { "id": "ING004", "name": "กระเทียม", "category": "เครื่องปรุง", "stockQty": 2, "unit": "หัว", "purchasePrice": 12, "imageUrl": "", "notes": "" },
+    { "id": "ING005", "name": "หอมใหญ่", "category": "ผัก", "stockQty": 3, "unit": "ลูก", "purchasePrice": 10, "imageUrl": "", "notes": "" },
+    { "id": "ING006", "name": "ซีอิ๊ว", "category": "เครื่องปรุง", "stockQty": 1, "unit": "ขวด", "purchasePrice": 35, "imageUrl": "", "notes": "" },
+    { "id": "ING007", "name": "ซอสหอยนางรม", "category": "เครื่องปรุง", "stockQty": 1, "unit": "ขวด", "purchasePrice": 42, "imageUrl": "", "notes": "" },
+    { "id": "ING008", "name": "ใบกะเพรา", "category": "สมุนไพร", "stockQty": 2, "unit": "กำ", "purchasePrice": 15, "imageUrl": "", "notes": "" },
+    { "id": "ING009", "name": "อกไก่", "category": "โปรตีน", "stockQty": 0.5, "unit": "กก.", "purchasePrice": 95, "imageUrl": "", "notes": "" },
+    { "id": "ING010", "name": "เต้าหู้", "category": "โปรตีน", "stockQty": 2, "unit": "ก้อน", "purchasePrice": 18, "imageUrl": "", "notes": "" },
+    { "id": "ING011", "name": "ผักบุ้ง", "category": "ผัก", "stockQty": 1, "unit": "กำ", "purchasePrice": 18, "imageUrl": "", "notes": "" },
+    { "id": "ING012", "name": "น้ำปลา", "category": "เครื่องปรุง", "stockQty": 1, "unit": "ขวด", "purchasePrice": 28, "imageUrl": "", "notes": "" },
+    { "id": "ING013", "name": "น้ำตาล", "category": "เครื่องปรุง", "stockQty": 1, "unit": "ถุง", "purchasePrice": 25, "imageUrl": "", "notes": "" },
+    { "id": "ING014", "name": "น้ำมันพืช", "category": "ของแห้ง", "stockQty": 1, "unit": "ขวด", "purchasePrice": 55, "imageUrl": "", "notes": "" },
+    { "id": "ING015", "name": "พริก", "category": "เครื่องปรุง", "stockQty": 15, "unit": "เม็ด", "purchasePrice": 3, "imageUrl": "", "notes": "" },
+    { "id": "ING016", "name": "หมูกรอบ", "category": "โปรตีน", "stockQty": 0.4, "unit": "กก.", "purchasePrice": 180, "imageUrl": "", "notes": "" },
+    { "id": "ING017", "name": "คะน้า", "category": "ผัก", "stockQty": 1, "unit": "กำ", "purchasePrice": 22, "imageUrl": "", "notes": "" },
+    { "id": "ING018", "name": "กุ้ง", "category": "ซีฟู้ด", "stockQty": 0.3, "unit": "กก.", "purchasePrice": 220, "imageUrl": "", "notes": "" }
+  ],
+  "recipes": [
+    {
+      "id": "REC001",
+      "name": "ข้าวผัดหมู",
+      "category": "ข้าวจานเดียว",
+      "imageUrl": "https://images.unsplash.com/photo-1512058564366-c9e3f7f14d5b?auto=format&fit=crop&w=900&q=70",
+      "notes": "เมนูคลาสสิก ทำง่าย กินได้ทุกวัน",
+      "items": [
+        { "ingredientId": "ING002", "requiredQty": 1 },
+        { "ingredientId": "ING003", "requiredQty": 0.2 },
+        { "ingredientId": "ING001", "requiredQty": 1 },
+        { "ingredientId": "ING004", "requiredQty": 0.25 },
+        { "ingredientId": "ING006", "requiredQty": 0.05 }
+      ]
+    },
+    {
+      "id": "REC002",
+      "name": "ไข่เจียวหมูสับ",
+      "category": "กับข้าว",
+      "imageUrl": "https://images.unsplash.com/photo-1510693206972-df098062cb71?auto=format&fit=crop&w=900&q=70",
+      "notes": "กินกับข้าวสวยร้อนๆ อร่อยมาก",
+      "items": [
+        { "ingredientId": "ING001", "requiredQty": 2 },
+        { "ingredientId": "ING003", "requiredQty": 0.1 },
+        { "ingredientId": "ING012", "requiredQty": 0.03 },
+        { "ingredientId": "ING014", "requiredQty": 0.03 }
+      ]
+    },
+    {
+      "id": "REC003",
+      "name": "ผัดกะเพราหมู",
+      "category": "อาหารจานเดียว",
+      "imageUrl": "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=900&q=70",
+      "notes": "เผ็ด หอมกะเพรา ทำไวมาก",
+      "items": [
+        { "ingredientId": "ING003", "requiredQty": 0.2 },
+        { "ingredientId": "ING008", "requiredQty": 0.5 },
+        { "ingredientId": "ING015", "requiredQty": 4 },
+        { "ingredientId": "ING004", "requiredQty": 0.25 },
+        { "ingredientId": "ING007", "requiredQty": 0.05 }
+      ]
+    },
+    {
+      "id": "REC004",
+      "name": "ผัดกะเพราไก่",
+      "category": "อาหารจานเดียว",
+      "imageUrl": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=900&q=70",
+      "notes": "ทางเลือกโปรตีนเบากว่าแต่ยังเข้มข้น",
+      "items": [
+        { "ingredientId": "ING009", "requiredQty": 0.2 },
+        { "ingredientId": "ING008", "requiredQty": 0.5 },
+        { "ingredientId": "ING015", "requiredQty": 4 },
+        { "ingredientId": "ING004", "requiredQty": 0.25 },
+        { "ingredientId": "ING007", "requiredQty": 0.05 }
+      ]
+    },
+    {
+      "id": "REC005",
+      "name": "ผัดผักบุ้งไฟแดง",
+      "category": "ผัก",
+      "imageUrl": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=900&q=70",
+      "notes": "ทำเร็ว กินคู่เมนูหลักได้ดี",
+      "items": [
+        { "ingredientId": "ING011", "requiredQty": 1 },
+        { "ingredientId": "ING004", "requiredQty": 0.25 },
+        { "ingredientId": "ING015", "requiredQty": 2 },
+        { "ingredientId": "ING006", "requiredQty": 0.04 }
+      ]
+    },
+    {
+      "id": "REC006",
+      "name": "คะน้าหมูกรอบ",
+      "category": "กับข้าว",
+      "imageUrl": "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=900&q=70",
+      "notes": "เค็มหอม กินกับข้าวสวยอร่อยมาก",
+      "items": [
+        { "ingredientId": "ING016", "requiredQty": 0.2 },
+        { "ingredientId": "ING017", "requiredQty": 1 },
+        { "ingredientId": "ING004", "requiredQty": 0.25 },
+        { "ingredientId": "ING007", "requiredQty": 0.05 }
+      ]
+    },
+    {
+      "id": "REC007",
+      "name": "เต้าหู้ผัดกระเทียม",
+      "category": "มังสวิรัติ",
+      "imageUrl": "https://images.unsplash.com/photo-1511690743698-d9d85f2fbf38?auto=format&fit=crop&w=900&q=70",
+      "notes": "เรียบง่าย แต่อิ่มและสบายท้อง",
+      "items": [
+        { "ingredientId": "ING010", "requiredQty": 1 },
+        { "ingredientId": "ING004", "requiredQty": 0.25 },
+        { "ingredientId": "ING006", "requiredQty": 0.04 },
+        { "ingredientId": "ING013", "requiredQty": 0.02 }
+      ]
+    },
+    {
+      "id": "REC008",
+      "name": "ข้าวผัดกุ้ง",
+      "category": "ข้าวจานเดียว",
+      "imageUrl": "https://images.unsplash.com/photo-1604908554027-1f8f5f3af3f0?auto=format&fit=crop&w=900&q=70",
+      "notes": "เมนูซีฟู้ดที่ดูพรีเมียมขึ้น",
+      "items": [
+        { "ingredientId": "ING002", "requiredQty": 1 },
+        { "ingredientId": "ING018", "requiredQty": 0.2 },
+        { "ingredientId": "ING001", "requiredQty": 1 },
+        { "ingredientId": "ING004", "requiredQty": 0.25 },
+        { "ingredientId": "ING006", "requiredQty": 0.05 }
+      ]
+    }
+  ]
+}
