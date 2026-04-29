@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Food Menu Planner</title>
-    <meta name="description" content="เมนูอาหารพร้อมตะกร้าออเดอร์และแชร์เข้า LINE">
+    <meta name="description" content="เว็บเมนูอาหารพร้อมตะกร้าออเดอร์ เช็กวัตถุดิบ แชร์ LINE และดูออเดอร์รายวัน">
     <link rel="preconnect" href="https://images.unsplash.com">
     <link rel="stylesheet" href="./styles.css">
   </head>
@@ -14,7 +14,7 @@
         <div class="hero-copy">
           <p class="eyebrow">Food Menu Planner</p>
           <h1>กินอะไรดีคะ?</h1>
-          <p class="hero-text">เลือกเมนูแบบร้านอาหาร ดูวัตถุดิบที่ใช้ เพิ่มลงตะกร้าออเดอร์ และสรุปข้อความเพื่อส่งเข้า LINE หลังสั่งได้ในหน้าเดียว</p>
+          <p class="hero-text">เลือกเมนูแบบร้านอาหาร ดูวัตถุดิบที่ใช้ เพิ่มลงตะกร้าออเดอร์ บันทึกออเดอร์รายวัน และสรุปข้อความเพื่อส่งเข้า LINE ได้ในหน้าเดียว</p>
         </div>
         <div class="hero-stats" id="summaryCards"></div>
       </header>
@@ -23,6 +23,7 @@
         <button class="tab is-active" data-tab="recipes">เมนูอาหาร</button>
         <button class="tab" data-tab="ingredients">วัตถุดิบ</button>
         <button class="tab" data-tab="cart">ตะกร้าออเดอร์</button>
+        <button class="tab" data-tab="daily-orders">ออเดอร์รายวัน</button>
         <button class="tab" data-tab="share">เช็กวัตถุดิบ + แชร์ LINE</button>
       </nav>
 
@@ -72,10 +73,22 @@
             <span class="section-label">ส่งเข้า LINE หลังสั่ง</span>
             <textarea id="orderLineText" rows="7" readonly></textarea>
             <div class="actions">
+              <button class="primary" id="saveOrderBtn" type="button">บันทึกออเดอร์วันนี้</button>
               <button class="secondary" id="copyOrderTextBtn" type="button">คัดลอกข้อความ</button>
               <a class="primary share-link" id="orderLineLink" href="#" target="_blank" rel="noopener noreferrer">ส่งเข้า LINE</a>
             </div>
           </div>
+        </section>
+
+        <section class="panel is-hidden" data-panel="daily-orders">
+          <div class="panel-head">
+            <div>
+              <span class="section-label">Daily Orders</span>
+              <h2>ออเดอร์รายวัน</h2>
+            </div>
+            <button class="secondary" id="clearHistoryBtn" type="button">ล้างประวัติ</button>
+          </div>
+          <div class="simple-grid" id="dailyOrdersList"></div>
         </section>
 
         <section class="panel is-hidden" data-panel="share">
@@ -164,7 +177,10 @@
             <input id="recipeYoutubeInput" type="url" placeholder="https://www.youtube.com/watch?v=...">
           </label>
           <div class="field full">
-            <span>วัตถุดิบที่ใช้</span>
+            <div class="ingredient-editor-head">
+              <span>วัตถุดิบที่ใช้</span>
+              <button class="secondary" id="addIngredientRowBtn" type="button">เพิ่มรายการ</button>
+            </div>
             <div id="recipeIngredientEditor" class="ingredient-editor-grid"></div>
           </div>
         </div>

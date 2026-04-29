@@ -193,6 +193,12 @@ p {
   gap: 14px;
 }
 
+.daily-order-group,
+.daily-order-list {
+  display: grid;
+  gap: 14px;
+}
+
 .card,
 .cart-item,
 .result-card,
@@ -322,13 +328,21 @@ p {
 .ingredient-check-grid,
 .ingredient-editor-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+}
+
+.ingredient-editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
 }
 
 .ingredient-check,
 .ingredient-editor-item {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   padding: 12px 14px;
@@ -347,23 +361,12 @@ p {
   justify-content: space-between;
 }
 
-.ingredient-editor-item label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.ingredient-editor-item select {
   width: 100%;
 }
 
-.ingredient-editor-item input[type="checkbox"] {
-  flex: 0 0 auto;
-}
-
-.ingredient-editor-item span {
-  flex: 1 1 auto;
-}
-
-.ingredient-editor-item input[type="number"] {
-  width: 88px;
+.ingredient-editor-item .ghost {
+  padding-inline: 14px;
 }
 
 .menu-list-item,
@@ -374,6 +377,26 @@ p {
   border-radius: 16px;
   background: #fff;
   border: 1px solid var(--line);
+}
+
+.daily-order-item {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid var(--line);
+}
+
+.daily-order-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.small-button {
+  padding: 8px 12px;
 }
 
 .menu-list-item h4,
