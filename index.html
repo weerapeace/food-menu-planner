@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Food Menu Planner</title>
-    <meta name="description" content="เว็บเมนูอาหารพร้อมตะกร้าออเดอร์ เช็กวัตถุดิบ แชร์ LINE และดูออเดอร์รายวัน">
+    <meta name="description" content="เว็บเมนูอาหารพร้อมวัตถุดิบ ตะกร้าออเดอร์ ออเดอร์รายวัน และแชร์ LINE">
     <link rel="preconnect" href="https://images.unsplash.com">
     <link rel="stylesheet" href="./styles.css">
   </head>
@@ -14,7 +14,7 @@
         <div class="hero-copy">
           <p class="eyebrow">Food Menu Planner</p>
           <h1>กินอะไรดีคะ?</h1>
-          <p class="hero-text">เลือกเมนูแบบร้านอาหาร ดูวัตถุดิบที่ใช้ เพิ่มลงตะกร้าออเดอร์ บันทึกออเดอร์รายวัน และสรุปข้อความเพื่อส่งเข้า LINE ได้ในหน้าเดียว</p>
+          <p class="hero-text">เลือกเมนูแบบร้านอาหาร เพิ่มวัตถุดิบได้เอง จัดตะกร้าออเดอร์ เก็บออเดอร์รายวัน และแชร์เข้ากลุ่ม LINE ได้ในหน้าเดียว</p>
         </div>
         <div class="hero-stats" id="summaryCards"></div>
       </header>
@@ -53,9 +53,13 @@
               <span class="section-label">Ingredients</span>
               <h2>วัตถุดิบทั้งหมด</h2>
             </div>
+            <button class="primary" id="openAddIngredientBtn" type="button">เพิ่มวัตถุดิบ</button>
           </div>
-          <div class="toolbar">
-            <input id="ingredientSearch" type="search" placeholder="ค้นหาวัตถุดิบ หรือหมวดหมู่">
+          <div class="toolbar toolbar-ingredients">
+            <input id="ingredientSearch" type="search" placeholder="ค้นหาวัตถุดิบ">
+            <select id="ingredientCategoryFilter">
+              <option value="all">ทุกหมวดหมู่</option>
+            </select>
           </div>
           <div class="simple-grid" id="ingredientList"></div>
         </section>
@@ -95,19 +99,20 @@
           <div class="panel-head">
             <div>
               <span class="section-label">Share to LINE</span>
-              <h2>ติ๊กวัตถุดิบที่มี แล้วดูเมนูที่ทำได้</h2>
+              <h2>เลือกวัตถุดิบที่มี แล้วดูเมนูที่ทำได้</h2>
             </div>
           </div>
 
-          <div class="toolbar toolbar-split">
-            <input id="shareIngredientSearch" type="search" placeholder="ค้นหาวัตถุดิบที่จะติ๊ก">
+          <div class="toolbar toolbar-share-actions">
+            <button class="secondary" id="addShareIngredientRowBtn" type="button">เพิ่มวัตถุดิบที่มี</button>
+            <button class="secondary" id="openAddIngredientFromShareBtn" type="button">เพิ่มวัตถุดิบใหม่</button>
             <button class="secondary" type="button" id="clearSelectedIngredients">ล้างที่เลือก</button>
           </div>
 
           <div class="share-layout">
             <div class="share-picker">
               <div class="section-label">เลือกวัตถุดิบที่มีแล้ว</div>
-              <div class="ingredient-check-grid" id="ingredientChecklist"></div>
+              <div id="shareIngredientRows" class="ingredient-editor-grid"></div>
             </div>
 
             <div class="share-results">
@@ -179,7 +184,10 @@
           <div class="field full">
             <div class="ingredient-editor-head">
               <span>วัตถุดิบที่ใช้</span>
-              <button class="secondary" id="addIngredientRowBtn" type="button">เพิ่มรายการ</button>
+              <div class="inline-actions">
+                <button class="secondary" id="addIngredientRowBtn" type="button">เพิ่มรายการ</button>
+                <button class="secondary" id="openAddIngredientFromRecipeBtn" type="button">เพิ่มวัตถุดิบใหม่</button>
+              </div>
             </div>
             <div id="recipeIngredientEditor" class="ingredient-editor-grid"></div>
           </div>
@@ -187,6 +195,41 @@
         <div class="dialog-actions">
           <button type="button" class="secondary" id="cancelRecipeDialog">ยกเลิก</button>
           <button type="submit" class="primary">บันทึกเมนู</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="ingredientDialog">
+      <form method="dialog" id="ingredientForm">
+        <div class="dialog-head">
+          <h3 id="ingredientDialogTitle">เพิ่มวัตถุดิบ</h3>
+          <button type="button" class="icon-button" id="closeIngredientDialog">x</button>
+        </div>
+        <div class="form-grid">
+          <label class="field">
+            <span>ชื่อวัตถุดิบ</span>
+            <input id="ingredientNameInput" type="text" required>
+          </label>
+          <label class="field">
+            <span>หมวดหมู่</span>
+            <input id="ingredientCategoryInput" type="text" list="ingredientCategorySuggestions" placeholder="เช่น โปรตีน / ผัก">
+          </label>
+          <label class="field">
+            <span>หน่วย</span>
+            <input id="ingredientUnitInput" type="text" placeholder="เช่น ฟอง / กำ / กก.">
+          </label>
+          <label class="field">
+            <span>ราคาซื้อโดยประมาณ</span>
+            <input id="ingredientPriceInput" type="number" min="0" step="0.01" placeholder="0">
+          </label>
+          <label class="field full">
+            <span>โน้ต</span>
+            <textarea id="ingredientNotesInput" rows="3"></textarea>
+          </label>
+        </div>
+        <div class="dialog-actions">
+          <button type="button" class="secondary" id="cancelIngredientDialog">ยกเลิก</button>
+          <button type="submit" class="primary">บันทึกวัตถุดิบ</button>
         </div>
       </form>
     </dialog>
@@ -200,6 +243,8 @@
         <div id="recipeDetailBody"></div>
       </div>
     </dialog>
+
+    <datalist id="ingredientCategorySuggestions"></datalist>
 
     <template id="recipeCardTemplate">
       <article class="card recipe-card">

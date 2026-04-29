@@ -180,6 +180,15 @@ p {
   grid-template-columns: minmax(0, 1fr) 220px;
 }
 
+.toolbar-ingredients {
+  grid-template-columns: minmax(0, 1fr) 220px;
+}
+
+.toolbar-share-actions {
+  grid-template-columns: repeat(3, max-content);
+  align-items: center;
+}
+
 .recipe-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -339,6 +348,12 @@ p {
   margin-bottom: 10px;
 }
 
+.inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .ingredient-check,
 .ingredient-editor-item {
   display: grid;
@@ -367,6 +382,32 @@ p {
 
 .ingredient-editor-item .ghost {
   padding-inline: 14px;
+}
+
+.daily-order-group,
+.daily-order-list {
+  display: grid;
+  gap: 14px;
+}
+
+.daily-order-item {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid var(--line);
+}
+
+.daily-order-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.small-button {
+  padding: 8px 12px;
 }
 
 .menu-list-item,
@@ -565,6 +606,8 @@ dialog::backdrop {
   .hero-stats,
   .recipe-grid,
   .toolbar-split,
+  .toolbar-ingredients,
+  .toolbar-share-actions,
   .ingredient-check-grid,
   .ingredient-editor-grid,
   .form-grid {
