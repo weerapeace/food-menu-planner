@@ -223,67 +223,22 @@ async function tryLoadBackendState() {
 }
 
 function loadBackendState() {
-  const callbackName = 'foodMenuJsonp_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
-  const src = buildBackendGetUrl({
-    api: '1',
-    action: 'bootstrap',
-    callback: callbackName,
-    t: String(Date.now()),
-  });
-
-  return new Promise(function(resolve, reject) {
-    const script = document.createElement('script');
-    const cleanup = function() {
-      delete window[callbackName];
-      script.remove();
-    };
-
-    window[callbackName] = function(response) {
-      cleanup();
-      if (!response || response.ok === false) {
-        reject(new Error(response && response.error ? response.error : 'Backend error'));
-        return;
-      }
-      resolve(response.data || response);
-    };
-
-    script.onerror = function() {
-      cleanup();
-      reject(new Error('โหลดข้อมูลจาก Apps Script ไม่สำเร็จ'));
-    };
-
-    script.src = src;
-    document.body.appendChild(script);
-  });
+  return callBackendAction('bootstrap');
 }
 
 async function submitBackendAction(action, payload) {
-  const form = document.getElementById('sheetPostForm');
-  const iframe = document.getElementById('sheetPostTarget');
+  const response = await callBackendAction(action, payload || {});
+  if (!response || response.ok === false) {
+    throw new Error(response && response.error ? response.error : 'Backend action failed');
+  }
 
-  form.action = state.backendUrl;
-  document.getElementById('sheetPostAction').value = action;
-  document.getElementById('sheetPostPayload').value = JSON.stringify(payload || {});
-
-  await new Promise(function(resolve, reject) {
-    let settled = false;
-    const timeout = window.setTimeout(function() {
-      if (settled) return;
-      settled = true;
-      reject(new Error('ส่งข้อมูลไป Google Sheet ไม่สำเร็จ'));
-    }, 15000);
-
-    const onLoad = function() {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timeout);
-      iframe.removeEventListener('load', onLoad);
-      resolve();
-    };
-
-    iframe.addEventListener('load', onLoad, { once: true });
-    form.submit();
-  });
+  if (response.data) {
+    applyLoadedState(response.data, {
+      source: 'remote',
+      statusText: '??????????????? Google Sheet ????',
+    });
+    return;
+  }
 
   await syncFromBackend();
 }
@@ -323,6 +278,38 @@ function buildBackendGetUrl(params) {
     url.searchParams.set(key, params[key]);
   });
   return url.toString();
+}
+
+function callBackendAction(action, payload) {
+  const callbackName = 'foodMenuAction_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+  const src = buildBackendGetUrl({
+    api: '1',
+    action: action,
+    payload: JSON.stringify(payload || {}),
+    callback: callbackName,
+    t: String(Date.now()),
+  });
+
+  return new Promise(function(resolve, reject) {
+    const script = document.createElement('script');
+    const cleanup = function() {
+      delete window[callbackName];
+      script.remove();
+    };
+
+    window[callbackName] = function(response) {
+      cleanup();
+      resolve(response);
+    };
+
+    script.onerror = function() {
+      cleanup();
+      reject(new Error('??????????? Google Sheet ?????????'));
+    };
+
+    script.src = src;
+    document.body.appendChild(script);
+  });
 }
 
 function updateBackendStatus(text, mode) {
