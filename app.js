@@ -603,7 +603,7 @@ function renderCart() {
 function renderDailyOrders() {
   const container = document.getElementById('dailyOrdersList');
   if (!state.orderHistory.length) {
-    container.innerHTML = '<div class="empty-state">???????????????????????????</div>';
+    container.innerHTML = '<div class="empty-state">ยังไม่มีออเดอร์ที่บันทึกไว้</div>';
     return;
   }
 
@@ -618,20 +618,20 @@ function renderDailyOrders() {
   container.innerHTML = Object.keys(grouped).sort().reverse().map(function(dateKey) {
     return [
       '<section class="daily-order-group">',
-      '<div class="daily-order-head"><h3>' + escapeHtml(formatDateLabel(dateKey)) + '</h3><span class="chip">' + grouped[dateKey].length + ' ???????</span></div>',
+      '<div class="daily-order-head"><h3>' + escapeHtml(formatDateLabel(dateKey)) + '</h3><span class="chip">' + grouped[dateKey].length + ' ออเดอร์</span></div>',
       '<div class="daily-order-list">',
       grouped[dateKey].map(function(order) {
         return [
           '<article class="daily-order-item">',
-          '<div class="title-row"><strong>' + escapeHtml(order.timeLabel) + '</strong><button class="ghost small-button" type="button" onclick="removeHistoryOrder(\'' + escapeHtml(order.id) + '\')">??</button></div>',
+          '<div class="title-row"><strong>' + escapeHtml(order.timeLabel) + '</strong><button class="ghost small-button" type="button" onclick="removeHistoryOrder(\'' + escapeHtml(order.id) + '\')">ลบ</button></div>',
           '<div class="chips">',
           order.items.map(function(item) {
             return '<span class="chip">' + escapeHtml(item.name + ' x ' + item.qty) + '</span>';
           }).join(''),
           '</div>',
           '<div class="actions">',
-          '<button class="secondary" type="button" onclick="openDailyOrderDetail(\'' + escapeHtml(order.id) + '\')">????????????</button>',
-          '<button class="primary" type="button" onclick="shareDailyOrderToLine(\'' + escapeHtml(order.id) + '\')">??? LINE</button>',
+          '<button class="secondary" type="button" onclick="openDailyOrderDetail(\'' + escapeHtml(order.id) + '\')">ดูรายละเอียด</button>',
+          '<button class="primary" type="button" onclick="shareDailyOrderToLine(\'' + escapeHtml(order.id) + '\')">ส่ง LINE</button>',
           '</div>',
           '</article>',
         ].join('');
@@ -663,9 +663,9 @@ function renderAvailableMenus() {
 
   document.getElementById('selectedIngredientChips').innerHTML = selectedIngredients.length
     ? selectedIngredients.map(function(item) { return '<span class="chip">' + escapeHtml(item.name) + '</span>'; }).join('')
-    : '<span class="chip warn">??????????????????????</span>';
+    : '<span class="chip warn">ยังไม่ได้เลือกวัตถุดิบ</span>';
 
-  document.getElementById('availableMenuCount').textContent = availableMenus.length + ' ????';
+  document.getElementById('availableMenuCount').textContent = availableMenus.length + ' เมนู';
   document.getElementById('availableMenuList').innerHTML = availableMenus.length
     ? availableMenus.map(function(recipe) {
       const coreCount = recipe.items.filter(function(item) {
@@ -675,15 +675,15 @@ function renderAvailableMenus() {
       return [
         '<div class="menu-list-item">',
         '<h4>' + escapeHtml(recipe.name) + '</h4>',
-        '<div class="meta-row"><span>' + escapeHtml(recipe.category || '?????????????') + '</span><span>???????????? ' + coreCount + ' ??????</span></div>',
+        '<div class="meta-row"><span>' + escapeHtml(recipe.category || 'ไม่ระบุประเภท') + '</span><span>วัตถุดิบหลัก ' + coreCount + ' รายการ</span></div>',
         '<div class="actions">',
-        '<button class="secondary" type="button" onclick="openRecipeDetail(\'' + recipe.id + '\')">??????</button>',
-        '<button class="primary" type="button" onclick="addAvailableMenuToCart(\'' + recipe.id + '\')">?????????????</button>',
+        '<button class="secondary" type="button" onclick="openRecipeDetail(\'' + recipe.id + '\')">ดูเมนู</button>',
+        '<button class="primary" type="button" onclick="addAvailableMenuToCart(\'' + recipe.id + '\')">เพิ่มลงตะกร้า</button>',
         '</div>',
         '</div>',
       ].join('');
     }).join('')
-    : '<div class="empty-state">?????????????????????????????????????</div>';
+    : '<div class="empty-state">ยังไม่มีเมนูที่ตรงกับวัตถุดิบที่เลือก</div>';
 
   const shareText = buildLineShareText(selectedIngredients, availableMenus, selectedIds.length);
   document.getElementById('lineShareText').value = shareText;
@@ -1228,8 +1228,8 @@ function createPlaceholderImage() {
 }
 
 function buildDailyOrderLineText(order) {
-  return ['???????????', '', order.items.map(function(item) {
-    return '- ' + item.name + ' x ' + item.qty + ' ???';
+  return ['สรุปออเดอร์', '', order.items.map(function(item) {
+    return '- ' + item.name + ' x ' + item.qty + ' จาน';
   }).join('\n')].join('\n');
 }
 
@@ -1237,15 +1237,16 @@ function openDailyOrderDetail(orderId) {
   const order = state.orderHistory.find(function(item) { return item.id === orderId; });
   if (!order) return;
 
-  document.getElementById('dailyOrderDetailTitle').textContent = '??????????? ' + order.timeLabel;
+  document.getElementById('dailyOrderDetailTitle').textContent = 'ออเดอร์เวลา ' + order.timeLabel;
   document.getElementById('dailyOrderDetailBody').innerHTML = [
     '<div class="detail-grid">',
-    '<div class="detail-section"><h4>??????</h4><p class="detail-note">' + escapeHtml(formatDateLabel(order.dateKey)) + '</p></div>',
-    '<div class="detail-section"><h4>???????????</h4><div class="chips">' + order.items.map(function(item) {
-      return '<span class="chip">' + escapeHtml(item.name + ' x ' + item.qty) + '</span>';
+    '<div class="detail-section"><h4>วันที่</h4><p class="detail-note">' + escapeHtml(formatDateLabel(order.dateKey)) + '</p></div>',
+    '<div class="detail-section"><h4>รายการอาหาร</h4><div class="menu-list">' + order.items.map(function(item) {
+      const recipe = state.data.recipes.find(function(entry) { return entry.name === item.name; });
+      return '<div class="menu-list-item"><div class="title-row"><strong>' + escapeHtml(item.name + ' x ' + item.qty) + '</strong></div><div class="actions">' + (recipe ? '<button class="secondary" type="button" onclick="openRecipeDetail(\'' + recipe.id + '\')">ดูเมนู</button>' : '') + '</div></div>';
     }).join('') + '</div></div>',
-    '<div class="detail-section"><h4>?????????? LINE</h4><div class="detail-longtext">' + formatLongText(buildDailyOrderLineText(order)) + '</div></div>',
-    '<div class="actions"><button class="primary" type="button" onclick="shareDailyOrderToLine(\'' + order.id + '\')">??????? LINE</button></div>',
+    '<div class="detail-section"><h4>ข้อความส่ง LINE</h4><div class="detail-longtext">' + formatLongText(buildDailyOrderLineText(order)) + '</div></div>',
+    '<div class="actions"><button class="primary" type="button" onclick="shareDailyOrderToLine(\'' + order.id + '\')">ส่งเข้า LINE</button></div>',
     '</div>',
   ].join('');
   document.getElementById('dailyOrderDetailDialog').showModal();
