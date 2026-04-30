@@ -109,6 +109,9 @@ function bindShareActions() {
     saveCurrentOrder(true);
   });
   document.getElementById('clearHistoryBtn').addEventListener('click', clearOrderHistory);
+  document.getElementById('createShareIngredientBtn').addEventListener('click', function() {
+    void createIngredientFromShareSearch();
+  });
 }
 
 function bindRecipeDialogs() {
@@ -980,6 +983,7 @@ async function saveIngredientFromDialog() {
 
 function openShareIngredientDialog() {
   document.getElementById('shareIngredientModalSearch').value = '';
+  document.getElementById('shareIngredientHelperText').textContent = 'พิมพ์ชื่อวัตถุดิบที่ต้องการค้นหาได้เลย ถ้ายังไม่มีในระบบให้กดเพิ่มเข้าระบบ';
   renderShareIngredientChecklist();
   document.getElementById('shareIngredientDialog').showModal();
 }
@@ -991,9 +995,21 @@ function closeShareIngredientDialog() {
 function renderShareIngredientChecklist() {
   const search = normalizeText(document.getElementById('shareIngredientModalSearch').value);
   const container = document.getElementById('shareIngredientChecklist');
+  const helper = document.getElementById('shareIngredientHelperText');
   const ingredients = state.data.ingredients.filter(function(item) {
     return isCoreShareIngredient(item) && (!search || normalizeText([item.name, item.category].join(' ')).includes(search));
   });
+
+  if (search) {
+    const exactMatch = state.data.ingredients.some(function(item) {
+      return normalizeText(item.name) === search;
+    });
+    helper.textContent = exactMatch
+      ? 'เจอวัตถุดิบในระบบแล้ว เลือกติ๊กได้เลย'
+      : 'ยังไม่พบชื่อที่ตรงกัน ถ้าต้องการให้กดเพิ่มเข้าระบบได้เลย';
+  } else {
+    helper.textContent = 'พิมพ์ชื่อวัตถุดิบที่ต้องการค้นหาได้เลย ถ้ายังไม่มีในระบบให้กดเพิ่มเข้าระบบ';
+  }
 
   container.innerHTML = ingredients.length
     ? ingredients.map(function(item) {
@@ -1016,6 +1032,69 @@ function saveShareIngredientSelection() {
   });
   closeShareIngredientDialog();
   renderAll();
+}
+
+async function createIngredientFromShareSearch() {
+  const searchInput = document.getElementById('shareIngredientModalSearch');
+  const rawName = String(searchInput.value || '').trim();
+  if (!rawName) {
+    alert('กรุณาพิมพ์ชื่อวัตถุดิบก่อน');
+    return;
+  }
+
+  const existing = state.data.ingredients.find(function(item) {
+    return normalizeText(item.name) === normalizeText(rawName);
+  });
+
+  if (existing) {
+    if (!state.selectedIngredients.includes(existing.id)) {
+      state.selectedIngredients.push(existing.id);
+    }
+    renderShareIngredientChecklist();
+    renderAll();
+    return;
+  }
+
+  const ingredient = {
+    id: 'ING' + Date.now(),
+    name: rawName,
+    category: 'อื่นๆ',
+    stockQty: 0,
+    unit: '',
+    purchasePrice: 0,
+    imageUrl: '',
+    notes: '',
+  };
+
+  const raw = toRawData(state.data);
+  raw.ingredients.push(ingredient);
+
+  if (!state.selectedIngredients.includes(ingredient.id)) {
+    state.selectedIngredients.push(ingredient.id);
+  }
+
+  applyLoadedState({
+    ingredients: raw.ingredients,
+    recipes: raw.recipes,
+    orderHistory: state.orderHistory,
+    recipeCategories: state.customRecipeCategories,
+  }, {
+    source: 'local',
+    statusText: state.backendUrl ? 'เพิ่มวัตถุดิบแล้ว กำลังส่งขึ้นฐานข้อมูล' : 'เพิ่มวัตถุดิบแล้ว',
+  });
+
+  searchInput.value = '';
+  renderShareIngredientChecklist();
+  renderAll();
+
+  if (state.backendUrl) {
+    try {
+      await submitBackendAction('saveIngredient', ingredient);
+    } catch (error) {
+      console.error(error);
+      updateBackendStatus('บันทึกวัตถุดิบบนฐานข้อมูลไม่สำเร็จ ตอนนี้ข้อมูลอยู่ในเครื่องก่อน', 'error');
+    }
+  }
 }
 
 function openRecipeDetail(recipeId) {

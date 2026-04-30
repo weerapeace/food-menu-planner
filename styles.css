@@ -321,6 +321,11 @@ p {
   align-items: center;
 }
 
+.share-ingredient-toolbar {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
 .recipe-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -547,6 +552,13 @@ p {
   padding-right: 4px;
 }
 
+.share-ingredient-helper {
+  margin: -4px 0 12px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .daily-order-group,
 .daily-order-list {
   display: grid;
@@ -770,6 +782,14 @@ dialog {
   box-shadow: var(--shadow);
 }
 
+#shareIngredientDialog {
+  width: min(1120px, calc(100vw - 24px));
+}
+
+#shareIngredientDialog form {
+  padding: 6px 6px 0;
+}
+
 dialog::backdrop {
   background: rgba(40, 25, 18, 0.42);
 }
@@ -797,6 +817,7 @@ dialog::backdrop {
   .toolbar-split,
   .toolbar-ingredients,
   .toolbar-share-actions,
+  .share-ingredient-toolbar,
   .ingredient-check-grid,
   .ingredient-editor-grid,
   .form-grid {
