@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "food-menu-planner",
+  "name": "kin-arai-dee-ka",
   "compatibility_date": "2026-04-30",
   "pages_build_output_dir": ".",
   "d1_databases": [
