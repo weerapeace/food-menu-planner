@@ -2,7 +2,7 @@ const APP_DATA_KEY = 'food-menu-app-data-v6';
 const ORDER_HISTORY_KEY = 'food-menu-daily-orders-v4';
 const BACKEND_URL_KEY = 'food-menu-backend-url-v1';
 const RECIPE_CATEGORY_KEY = 'food-menu-recipe-categories-v1';
-const DEFAULT_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyAyJmOnTo83hjaUyKq_TXHRUWRVF7VPvLV9RU9pRmh5QKkYlR_eursWH_SsY_kOOhEDg/exec';
+const DEFAULT_BACKEND_URL = '/api';
 
 const CORE_SHARE_CATEGORIES = new Set(['โปรตีน', 'ผัก', 'ซีฟู้ด']);
 
@@ -201,6 +201,9 @@ function applyLoadedState(payload, options) {
     recipes: payload.recipes || [],
   });
   state.orderHistory = Array.isArray(payload.orderHistory) ? payload.orderHistory : [];
+  if (Array.isArray(payload.recipeCategories)) {
+    state.customRecipeCategories = uniqueSorted(payload.recipeCategories);
+  }
   state.selectedIngredients = state.selectedIngredients.filter(function(id) {
     return state.data.ingredients.some(function(item) { return item.id === id; });
   });
@@ -249,16 +252,52 @@ async function tryLoadBackendStateWithRetry(maxAttempts, delayMs) {
 }
 
 function loadBackendState() {
-  return callBackendAction('bootstrap').then(function(response) {
-    if (!response || response.ok === false) {
-      throw new Error(response && response.error ? response.error : 'Backend bootstrap failed');
+  return fetch('/api/bootstrap', {
+    headers: {
+      'accept': 'application/json',
+    },
+  }).then(async function(response) {
+    const payload = await response.json();
+    if (!response.ok || !payload || payload.ok === false) {
+      throw new Error(payload && payload.error ? payload.error : 'Backend bootstrap failed');
     }
-    return response.data || response;
+    return payload.data || payload;
   });
 }
 
 async function submitBackendAction(action, payload) {
-  const response = await callBackendAction(action, payload || {});
+  const endpointMap = {
+    saveIngredient: { url: '/api/ingredients', method: 'POST' },
+    saveRecipe: { url: '/api/recipes', method: 'POST' },
+    saveOrder: { url: '/api/orders', method: 'POST' },
+    deleteOrder: { url: '/api/orders/' + encodeURIComponent(String((payload || {}).id || '')), method: 'DELETE' },
+    clearOrders: { url: '/api/orders', method: 'DELETE' },
+    saveRecipeCategory: { url: '/api/recipe-categories', method: 'POST' },
+    renameRecipeCategory: { url: '/api/recipe-categories', method: 'PATCH' },
+    deleteRecipeCategory: { url: '/api/recipe-categories', method: 'DELETE' },
+  };
+  const endpoint = endpointMap[action];
+  if (!endpoint) {
+    throw new Error('Unknown backend action: ' + action);
+  }
+
+  const response = await fetch(endpoint.url, {
+    method: endpoint.method,
+    headers: {
+      'content-type': 'application/json',
+      'accept': 'application/json',
+    },
+    body: endpoint.method === 'DELETE' && action === 'deleteOrder'
+      ? null
+      : JSON.stringify(payload || {}),
+  }).then(async function(res) {
+    const data = await res.json();
+    if (!res.ok || !data || data.ok === false) {
+      throw new Error(data && data.error ? data.error : 'Backend action failed');
+    }
+    return data;
+  });
+
   if (!response || response.ok === false) {
     throw new Error(response && response.error ? response.error : 'Backend action failed');
   }
@@ -311,7 +350,7 @@ function persistLocalMirrors() {
 }
 
 function getStoredBackendUrl() {
-  return normalizeBackendUrl(localStorage.getItem(BACKEND_URL_KEY) || DEFAULT_BACKEND_URL);
+  return DEFAULT_BACKEND_URL;
 }
 
 function normalizeBackendUrl(value) {
@@ -1356,6 +1395,12 @@ function saveRecipeCategoryFromDialog() {
     persistLocalMirrors();
     populateRecipeCategoryOptions();
     renderRecipeCategoryManager();
+    if (state.backendUrl) {
+      submitBackendAction('saveRecipeCategory', { name: name }).catch(function(error) {
+        console.error(error);
+        updateBackendStatus('บันทึกประเภทอาหารบน D1 ไม่สำเร็จ ตอนนี้ข้อมูลอยู่ในเครื่องก่อน', 'error');
+      });
+    }
   }
 
   input.value = '';
@@ -1396,8 +1441,13 @@ async function editRecipeCategoryName(oldName) {
 
   renderRecipeCategoryManager();
 
-  if (state.backendUrl && affectedRecipes.length) {
-    await syncRecipeRecordsToBackend(affectedRecipes);
+  if (state.backendUrl) {
+    try {
+      await submitBackendAction('renameRecipeCategory', { oldName: oldName, newName: trimmed });
+    } catch (error) {
+      console.error(error);
+      updateBackendStatus('อัปเดตประเภทอาหารบน D1 ไม่สำเร็จ ตอนนี้ข้อมูลอยู่ในเครื่องก่อน', 'error');
+    }
   }
 }
 
@@ -1432,19 +1482,12 @@ async function deleteRecipeCategoryName(categoryName) {
 
   renderRecipeCategoryManager();
 
-  if (state.backendUrl && affectedRecipes.length) {
-    await syncRecipeRecordsToBackend(affectedRecipes);
-  }
-}
-
-async function syncRecipeRecordsToBackend(recipes) {
-  for (const recipe of recipes) {
+  if (state.backendUrl) {
     try {
-      await submitBackendAction('saveRecipe', recipe);
+      await submitBackendAction('deleteRecipeCategory', { name: categoryName });
     } catch (error) {
       console.error(error);
-      updateBackendStatus('อัปเดต Google Sheet ไม่สำเร็จ ตอนนี้ข้อมูลในหน้าเว็บถูกอัปเดตก่อน', 'error');
-      break;
+      updateBackendStatus('ลบประเภทอาหารบน D1 ไม่สำเร็จ ตอนนี้ข้อมูลอยู่ในเครื่องก่อน', 'error');
     }
   }
 }

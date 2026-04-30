@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "kin-arai-dee-ka",
+  "compatibility_date": "2026-04-30",
+  "pages_build_output_dir": ".",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "kin-arai-dee-ka-db",
+      "database_id": "f8543134-40c5-4c10-8300-038204a7b454"
+    }
+  ]
+}
