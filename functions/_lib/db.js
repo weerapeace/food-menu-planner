@@ -220,7 +220,7 @@ async function upsertRecipe(db, payload) {
       sanitizeText(item.id) || `${recipe.id}_${ingredientId}`,
       recipe.id,
       ingredientId,
-      sanitizeNumber(item.requiredQty ?? item.required_qty || 1),
+      sanitizeNumber((item.requiredQty ?? item.required_qty) || 1),
       timestamp,
     ).run();
   }
